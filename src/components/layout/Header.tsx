@@ -30,7 +30,7 @@ const Header = () => {
 
     const navLinks = [
         { name: 'Community', href: '/' },
-        { name: 'Market Place', href: '/costumes' },
+        { name: 'Market Place', href: '/marketplace' },
     ];
 
     const supportLinks = [

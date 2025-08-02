@@ -98,6 +98,8 @@ export const useSupabaseAuth = () => {
         authState.isAuthenticated && !!authState.user?.id
     );
 
+    console.log('userRolesData', userRolesData?.current_role)
+
     useEffect(() => {
         if (rolesError) {
             router.push('/signin');
@@ -178,10 +180,10 @@ export const useSupabaseAuth = () => {
 
     // Update current role when user roles data is available
     useEffect(() => {
-        if (userRolesData && userRolesData.current_role) {
+        if (userRolesData && userRolesData?.current_role) {
             setAuthState(prev => ({
                 ...prev,
-                currentRole: userRolesData.current_role as UserRole,
+                currentRole: userRolesData?.current_role as UserRole || null,
             }));
         }
     }, [userRolesData]);
