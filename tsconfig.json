@@ -1,27 +1,110 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
+    // ECMAScript target and library settings
+    "target": "ES2020",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext",
+      "ESNext.Array",
+      "ESNext.Promise"
+    ],
+    // Module settings
     "module": "esnext",
     "moduleResolution": "bundler",
+    "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "allowSyntheticDefaultImports": true,
+    // JavaScript support
+    "allowJs": true,
+    "skipLibCheck": true,
+    // Emit settings
+    "noEmit": true,
     "incremental": true,
+    "sourceMap": true,
+    // Type checking
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
+    // Additional checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    // Import paths and aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@components/*": [
+        "./src/components/*"
+      ],
+      "@hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ],
+      "@styles/*": [
+        "src/styles/*"
+      ],
+      "@pages/*": [
+        "./src/pages/*"
+      ],
+      "@lib/*": [
+        "./src/lib/*"
+      ],
+      "@config/*": [
+        "./src/config/*"
+      ],
+      "@types/*": [
+        "./src/types/*"
+      ],
+      "@services/*": [
+        "./src/services/*"
+      ],
+      "@assets/*": [
+        "./src/assets/*"
+      ],
+      "@contexts/*": [
+        "./src/contexts/*"
+      ]
+    },
+    // React settings
+    "jsx": "preserve",
+    // Next.js settings
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    // Force consistent casing in imports
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/**/*.json"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".next",
+    "out",
+    "coverage",
+    "public"
+  ]
 }
