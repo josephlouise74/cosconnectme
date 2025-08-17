@@ -1,10 +1,10 @@
-import { Municipality } from '@/lib/apis/municipalitiesApi';
-import type { BorrowerUser } from '@/lib/zodFormSchema/borrowerSchema';
-import { Barangay, Province, Region } from '@/types/philippineDataType';
+
+import { Municipality } from '@/lib/api/municipalitiesApi';
+import { Barangay, Province, Region } from '@/lib/types/philippineDataType';
 import { Control } from 'react-hook-form';
 
 interface LocationFieldsProps {
-    control: Control<BorrowerUser>;
+    control: Control<any>;
     regions: Region[];
     provinces: Province[];
     cities: Municipality[];

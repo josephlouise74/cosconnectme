@@ -2,6 +2,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ky, { HTTPError } from "ky";
 import { ApiErrorResponse, ApiResponse, CostumeItem, PaginatedApiResponse, PaginationParams } from "../types/marketplaceType";
+import { LenderByIdResponse } from "../types/lenderType";
+import { toast } from "sonner";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v2";
@@ -241,81 +243,6 @@ export const useGetAllCostumeForMarketPlace = (options?: {
     });
 };
 
-/**
- * Hook to create a new costume
- */
-/* export const useCreateCostume = () => {
-    const queryClient = useQueryClient();
-
-    const createCostume = async (productData: CreateCostumeData): Promise<ApiResponse<CostumeItem>> => {
-        try {
-            const response = await apiClient.post('costume/create', {
-                json: productData,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            }).json<ApiResponse<CostumeItem>>();
-
-            if (!response.success) {
-                throw new Error(response.message || 'Failed to create costume');
-            }
-
-            return response;
-        } catch (error) {
-            if (error instanceof HTTPError) {
-                const errorData = await error.response.json().catch(() => ({})) as ApiErrorResponse;
-                const errorMessage = errorData.message || 'Failed to create costume';
-                toast.error(errorMessage);
-                throw new Error(errorMessage);
-            }
-
-            const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-            toast.error(errorMessage);
-            throw new Error(errorMessage);
-        }
-    };
-
-    const mutation = useMutation({
-        mutationFn: createCostume,
-        onSuccess: (data, variables) => {
-            // Get the lender ID from the product data
-            const lenderId = variables.lenderUser?.uid;
-            if (lenderId) {
-                // Invalidate and refetch the costume list for this lender
-                queryClient.invalidateQueries({
-                    queryKey: costumeKeys.byLender(lenderId)
-                });
-                queryClient.invalidateQueries({
-                    queryKey: costumeKeys.byLenderPaginated(lenderId, { page: 1, limit: 10 })
-                });
-            }
-
-            // Invalidate all costumes queries to ensure consistency
-            queryClient.invalidateQueries({
-                queryKey: costumeKeys.all
-            });
-
-            // Invalidate marketplace queries
-            queryClient.invalidateQueries({
-                queryKey: [...costumeKeys.lists(), 'marketplace']
-            });
-
-            toast.success(data.message || 'Costume created successfully!');
-        },
-        onError: (error: Error) => {
-            console.error('Costume creation failed:', error);
-        },
-    });
-
-    return {
-        createCostume: mutation.mutateAsync,
-        isLoading: mutation.isPending,
-        isError: mutation.isError,
-        isSuccess: mutation.isSuccess,
-        error: mutation.error,
-    };
-};
- */
 
 
 /**
@@ -340,3 +267,61 @@ export const usePrefetchCostume = () => {
         });
     };
 }
+
+
+
+
+export const useGetLenderById = (lenderId: string, enabled: boolean = true) => {
+    const getLenderByIdApiRequest = async (lenderId: string): Promise<LenderByIdResponse> => {
+        try {
+            if (!lenderId) {
+                throw new Error('Lender ID is required')
+            }
+
+
+            const response = await ky.get(`${API_BASE_URL}/lender/${lenderId}`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }).json<LenderByIdResponse>()
+
+            console.log("response lender data", response)
+            if (!response.success) {
+                throw new Error(response.success ? '' : 'Failed to fetch lender data')
+            }
+            return response
+        } catch (error) {
+            console.error('Get lender by ID API error:', error)
+            if (error instanceof HTTPError) {
+                const errorResponse = await error.response.json().catch(() => ({}))
+                const errorMessage = errorResponse?.message || 'Failed to fetch lender data'
+                toast.error(errorMessage)
+                throw new Error(errorMessage)
+            }
+            toast.error('An unexpected error occurred while fetching lender data')
+            throw error
+        }
+    }
+
+    const query = useQuery<LenderByIdResponse>({
+        queryKey: ['lenderById', lenderId],
+        queryFn: () => getLenderByIdApiRequest(lenderId),
+        enabled: enabled && !!lenderId,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: (failureCount, _) => {
+            return failureCount < 3
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    })
+
+    return {
+        isLoading: query.isLoading,
+        isError: query.isError,
+        isSuccess: query.isSuccess,
+        error: query.error,
+        data: query.data?.data, // This is the LenderData object
+        refetch: query.refetch,
+        isFetching: query.isFetching,
+    }
+}
+

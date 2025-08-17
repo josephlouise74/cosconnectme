@@ -84,7 +84,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) =
       id: costume.id,
     });
     const slugifiedName = slugify(costume.name);
-    router.push(`/costumes/${slugifiedName}?${query.toString()}`);
+    router.push(`/marketplace/${slugifiedName}?${query.toString()}`);
   }, [costume, router]);
 
   const handleAddToWishlist = useCallback(

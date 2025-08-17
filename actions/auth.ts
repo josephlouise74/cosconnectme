@@ -98,77 +98,103 @@ export async function signUp(formData: SignUpData) {
 export async function signIn(formData: SignInData) {
     const supabase = await createClient();
 
-    const { error, data } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
-    });
+    try {
+        // Sign in with Supabase Auth
+        const { error, data } = await supabase.auth.signInWithPassword({
+            email: formData.email,
+            password: formData.password
+        });
 
-    if (error) {
-        return {
-            status: error?.message,
-            user: null
-        };
-    }
-
-    // Check if user exists in users table using uid (Supabase auth ID)
-    const { data: existingUser } = await supabase
-        .from("users")
-        .select("uid, username, email, phone_number, role")
-        .eq("uid", data.user.id) // Use uid instead of email for lookup
-        .single();
-
-    // Only create user record if it doesn't exist
-    if (!existingUser) {
-        const userData = {
-            uid: data.user.id, // Use uid as primary key (Supabase auth ID)
-            username: data.user.user_metadata?.username || data.user.email?.split('@')[0], // Fallback to email prefix if no username
-            email: data.user.email!,
-            phone_number: data.user.user_metadata?.phone_number || data.user.phone || '',
-            role: ['borrower'], // Role should be an array of strings
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-
-        console.log('Attempting to insert user data:', userData);
-
-        const { error: insertError } = await supabase
-            .from("users")
-            .insert(userData);
-
-        if (insertError) {
-            console.error('Error inserting user:', insertError);
-            console.error('Error details:', {
-                message: insertError.message,
-                details: insertError.details,
-                hint: insertError.hint,
-                code: insertError.code
-            });
+        if (error) {
+            console.error('Authentication error:', error);
             return {
-                status: insertError.message,
+                status: error.message,
                 user: null
             };
         }
 
-        console.log('Successfully inserted user into database');
+        // Check if user exists in users table using uid (Supabase auth ID)
+        const { data: existingUser, } = await supabase
+            .from("users")
+            .select("*")
+            .eq("uid", data.user.id)
+            .single();
 
-        // Store role in user metadata after successful user creation
-        const { error: metadataError } = await supabase.auth.updateUser({
-            data: { role: 'borrower' }
-        });
+        // If user doesn't exist, create a new user record
+        if (!existingUser) {
+            const username = data.user.user_metadata?.username ||
+                data.user.email?.split('@')[0] ||
+                `user_${Math.random().toString(36).substring(2, 10)}`;
 
-        if (metadataError) {
-            console.error('Error updating user metadata:', metadataError);
-            // Don't fail the entire flow, just log the error
-        } else {
-            console.log('Successfully stored role "borrower" in user metadata');
+            const userData = {
+                uid: data.user.id,
+                id: crypto.randomUUID(),
+                username: username,
+                email: data.user.email!,
+                phone_number: data.user.user_metadata?.phone_number || data.user.phone || '',
+                full_name: data.user.user_metadata?.full_name || '',
+                first_name: data.user.user_metadata?.first_name || '',
+                last_name: data.user.user_metadata?.last_name || '',
+                role: ['borrower'],
+                current_role: 'borrower',
+                status: 'active',
+                email_verified: data.user.email_confirmed_at ? true : false,
+                phone_verified: data.user.phone_confirmed_at ? true : false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+
+            console.log('Creating new user with data:', userData);
+
+            const { error: insertError } = await supabase
+                .from("users")
+                .insert(userData);
+
+            if (insertError) {
+                console.error('Error creating user:', insertError);
+                return {
+                    status: insertError.message || 'Failed to create user profile',
+                    user: null
+                };
+            }
+
+            console.log('Successfully created user profile');
         }
-    }
 
-    revalidatePath("/", "layout");
-    return {
-        status: "success",
-        user: data.user
-    };
+        // Update user metadata with role if not set
+        if (!data.user.user_metadata?.role) {
+            const { error: metadataError } = await supabase.auth.updateUser({
+                data: {
+                    role: 'borrower',
+                    ...(data.user.user_metadata || {})
+                }
+            });
+
+            if (metadataError) {
+                console.error('Error updating user metadata:', metadataError);
+            }
+        }
+
+        // Get the updated user data
+        const { data: userData } = await supabase
+            .from('users')
+            .select('*')
+            .eq('uid', data.user.id)
+            .single();
+
+        revalidatePath("/", "layout");
+        return {
+            status: "success",
+            user: userData || data.user
+        };
+
+    } catch (error) {
+        console.error('Unexpected error during sign in:', error);
+        return {
+            status: 'An unexpected error occurred',
+            user: null
+        };
+    }
 }
 
 export async function signOut() {

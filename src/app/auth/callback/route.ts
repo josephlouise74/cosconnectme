@@ -79,7 +79,7 @@ export async function GET(request: Request) {
         // Check if user exists in users table using uid (Supabase auth ID)
         const { data: existingUser, error: selectError } = await supabase
             .from("users")
-            .select("uid, username, email, phone_number, role")
+            .select("*")
             .eq("uid", user.id)
             .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when no record found
 
@@ -100,24 +100,40 @@ export async function GET(request: Request) {
         if (!existingUser) {
             console.log('Creating new user record...');
 
-            // Extract data from user_metadata for Google OAuth
-            const { user_metadata } = user;
-            const email = user_metadata?.email || user.email;
-            // Username: use user_metadata.username if available, else use email name (before @)
-            let username = user_metadata?.username;
-            if (!username || typeof username !== 'string' || username.trim() === '') {
-                username = email?.split('@')[0] || `user-${Date.now()}`;
+            // Extract data from user_metadata for OAuth provider
+            const { user_metadata = {} } = user;
+            const email = user_metadata?.email || user.email || '';
+
+            // Generate username from email or create a random one
+            let username = user_metadata?.username || email?.split('@')[0] || `user_${Math.random().toString(36).substring(2, 10)}`;
+            username = username.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+            // Parse name from user_metadata
+            const fullName = user_metadata?.full_name || user_metadata?.name || '';
+            let firstName = user_metadata?.first_name || '';
+            let lastName = user_metadata?.last_name || '';
+
+            if (!firstName && fullName) {
+                const nameParts = fullName.split(' ');
+                firstName = nameParts[0] || '';
+                lastName = nameParts.slice(1).join(' ') || '';
             }
-            username = username.toLowerCase();
-            const profileImage = user_metadata?.picture || user_metadata?.avatar_url || "";
 
             const userData = {
                 uid: user.id,
+                id: crypto.randomUUID(),
                 username: username,
-                email: email!,
+                email: email,
                 phone_number: user_metadata?.phone_number || user.phone || '',
-                profile_image: profileImage,
-                role: ['borrower'], // Role should be an array of strings
+                full_name: fullName,
+                first_name: firstName,
+                last_name: lastName,
+                profile_image: user_metadata?.picture || user_metadata?.avatar_url || '',
+                role: ['borrower'],
+                current_role: 'borrower',
+                status: 'active',
+                email_verified: user.email_confirmed_at ? true : false,
+                phone_verified: user.phone_confirmed_at ? true : false,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };

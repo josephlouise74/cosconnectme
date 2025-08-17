@@ -6,13 +6,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import { motion } from 'framer-motion'
-import { Camera, Edit, Users, UserPlus } from 'lucide-react'
+import { Camera, Edit, UserPlus, Users } from 'lucide-react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useCallback, useMemo, useReducer, useState } from 'react'
-import { Card, CardHeader, CardContent, CardAction } from '@/components/ui/card'
 
-import { ProfileFormBorrowerValues } from '@/lib/zodFormSchema/borrowerSchema'
 import EditProfileBorrowerDialogSection, { mapUserRolesDataToProfileFormBorrowerValues } from '../EditProfileBorrowerDialogSection'
 
 // Define action types
@@ -190,7 +188,7 @@ const ProfileHeader = () => {
 
     // Only show edit button if user is viewing their own profile and is a borrower and userRolesData exists
     const showEditProfile = isOwnProfile && isBorrower && !!userRolesData;
-    const profileFormValues: ProfileFormBorrowerValues | null = userRolesData ? mapUserRolesDataToProfileFormBorrowerValues(userRolesData) : null;
+    const profileFormValues: any | null = userRolesData ? mapUserRolesDataToProfileFormBorrowerValues(userRolesData) : null;
 
     // If not viewing a borrower profile, show message
     if (!isViewingBorrowerProfile) {

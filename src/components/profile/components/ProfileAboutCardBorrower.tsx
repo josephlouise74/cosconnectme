@@ -1,10 +1,12 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Textarea } from '@/components/ui/textarea'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import { UserRolesResponseData } from '@/lib/types/userType'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Edit } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -12,106 +14,166 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 
 interface ProfileAboutCardBorrowerProps {
-    profileData: any
+    profileData: UserRolesResponseData | null
+    isOwnProfile?: boolean
 }
 
 // Bio update form schema
 const bioFormSchema = z.object({
-    bio: z.string().max(300, "Bio should be less than 300 characters"),
+    bio: z.string().max(300, "Bio should be less than 300 characters").optional(),
 })
 
 type BioFormValues = z.infer<typeof bioFormSchema>
 
-const ProfileAboutCardBorrower = ({ profileData }: ProfileAboutCardBorrowerProps) => {
+const ProfileAboutCardBorrower = ({
+    profileData,
+    isOwnProfile = false
+}: ProfileAboutCardBorrowerProps) => {
     const [isEditBioOpen, setIsEditBioOpen] = useState(false)
-    const [bio, setBio] = useState(profileData?.bio || '')
+    const { userRolesData } = useSupabaseAuth()
+
+    // Use prop data or fallback to userRolesData
+    const data = profileData || userRolesData
 
     // Form setup
     const form = useForm<BioFormValues>({
         resolver: zodResolver(bioFormSchema),
         defaultValues: {
-            bio: profileData?.bio || '',
+            bio: data?.bio || '',
         },
     })
 
-    const onBioSubmit = useCallback((values: BioFormValues) => {
-        console.log('Updating bio:', values)
-        setBio(values.bio)
-        setIsEditBioOpen(false)
-        // Here you would update the bio via API
+    const onBioSubmit = useCallback(async (values: BioFormValues) => {
+        try {
+            console.log('Updating bio:', values)
+            // Here you would update the bio via API
+            // await updateUserBio(values.bio)
+            setIsEditBioOpen(false)
+        } catch (error) {
+            console.error('Failed to update bio:', error)
+        }
     }, [])
+
+    if (!data) {
+        return (
+            <Card>
+                <CardContent className="p-6">
+                    <p className="text-gray-500 dark:text-gray-400">Loading profile information...</p>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    const { personal_info, address_information, email_verified, phone_verified } = data
+    const displayBio = data.bio || personal_info?.bio
 
     return (
         <>
-            <Card>
-                <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold">About</h2>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8"
-                            onClick={() => setIsEditBioOpen(true)}
-                        >
-                            <Edit size={16} />
-                        </Button>
+            <Card className="h-full">
+                <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">About</CardTitle>
+                        {isOwnProfile && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => setIsEditBioOpen(true)}
+                            >
+                                <Edit className="h-4 w-4" />
+                                <span className="sr-only">Edit bio</span>
+                            </Button>
+                        )}
                     </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {displayBio ? (
+                            <p className="text-gray-700 dark:text-gray-300">{displayBio}</p>
+                        ) : (
+                            <p className="text-gray-500 dark:text-gray-400 italic">No bio added yet.</p>
+                        )}
 
-                    <div className='flex flex-col'>
-                        <div className="space-y-4">
-                            {bio ? (
-                                <p className="text-gray-600 dark:text-gray-300">{bio}</p>
-                            ) : (
-                                <p className="text-gray-400 italic">No bio added yet.</p>
-                            )}
+                        <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                            {/* Contact Information */}
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Contact Information</h3>
+                                <div className="space-y-1.5">
+                                    {data.email && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <span className="font-medium text-gray-700 dark:text-gray-300 w-20">Email:</span>
+                                            <span className="text-gray-600 dark:text-gray-400 flex-1 truncate">
+                                                {data.email}
+                                                {email_verified && (
+                                                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                                                        (Verified)
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
 
-                            <div className="space-y-2 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                {profileData?.email && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium">Email:</span>
-                                        <span className="text-gray-600 dark:text-gray-300">{profileData.email}</span>
-                                    </div>
-                                )}
-
-                                {profileData?.phoneNumber && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium">Phone:</span>
-                                        <span className="text-gray-600 dark:text-gray-300">{profileData.phoneNumber}</span>
-                                    </div>
-                                )}
-
-                                {/* {profileData?.address && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium">Location:</span>
-                                        <span className="text-gray-600 dark:text-gray-300">{`${profileData.street} ${profileData.barangay} ${profileData.city.name} ${profileData.province} ${profileData.region}`}</span>
-                                    </div>
-                                )} */}
-
-                                {profileData?.city?.name && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium">City:</span>
-                                        <span className="text-gray-600 dark:text-gray-300">{profileData.city.name}</span>
-                                    </div>
-                                )}
-
-                                {profileData?.province && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium">Province:</span>
-                                        <span className="text-gray-600 dark:text-gray-300">{profileData.province}</span>
-                                    </div>
-                                )}
-
-                                {profileData?.country && (
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <span className="font-medium">Country:</span>
-                                        <span className="text-gray-600 dark:text-gray-300">{profileData.country}</span>
-                                    </div>
-                                )}
+                                    {personal_info?.phone_number && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <span className="font-medium text-gray-700 dark:text-gray-300 w-20">Phone:</span>
+                                            <span className="text-gray-600 dark:text-gray-400">
+                                                {personal_info.phone_number}
+                                                {phone_verified && (
+                                                    <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                                                        (Verified)
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {profileData?.isVerified && (
-                                <div className="mt-4 py-2 px-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 rounded-md text-green-700 dark:text-green-400 text-sm">
-                                    <span className="font-medium">✓ Verified Account</span>
+                            {/* Location Information */}
+                            {(address_information?.street || address_information?.city || address_information?.province) && (
+                                <div className="space-y-2 pt-2">
+                                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Location</h3>
+                                    <div className="space-y-1.5 text-sm">
+                                        {address_information.street && (
+                                            <div className="flex items-start gap-2">
+                                                <span className="font-medium text-gray-700 dark:text-gray-300 w-20">Address:</span>
+                                                <span className="text-gray-600 dark:text-gray-400">
+                                                    {address_information.street}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {(address_information.city || address_information.province) && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-20"></span>
+                                                <span className="text-gray-600 dark:text-gray-400">
+                                                    {[address_information.city?.name, address_information.province]
+                                                        .filter(Boolean)
+                                                        .join(', ')}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {(address_information.region || address_information.country) && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-20"></span>
+                                                <span className="text-gray-600 dark:text-gray-400">
+                                                    {[address_information.region, address_information.country]
+                                                        .filter(Boolean)
+                                                        .join(', ')}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {address_information.zip_code && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-gray-700 dark:text-gray-300 w-20">ZIP:</span>
+                                                <span className="text-gray-600 dark:text-gray-400">
+                                                    {address_information.zip_code}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -121,33 +183,39 @@ const ProfileAboutCardBorrower = ({ profileData }: ProfileAboutCardBorrowerProps
 
             {/* Edit Bio Dialog */}
             <Dialog open={isEditBioOpen} onOpenChange={setIsEditBioOpen}>
-                <DialogContent className="sm:max-w-[525px]">
+                <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>Update Bio</DialogTitle>
+                        <DialogTitle>Edit Bio</DialogTitle>
                     </DialogHeader>
-
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onBioSubmit)} className="space-y-4 mt-4">
+                        <form onSubmit={form.handleSubmit(onBioSubmit)} className="space-y-4">
                             <FormField
                                 control={form.control}
                                 name="bio"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Bio</FormLabel>
+                                        <FormLabel>About You</FormLabel>
                                         <FormControl>
                                             <Textarea
-                                                placeholder="Tell us about yourself..."
-                                                className="min-h-[120px]"
+                                                placeholder="Tell others about yourself..."
+                                                className="min-h-[120px] resize-none"
                                                 {...field}
                                             />
                                         </FormControl>
                                         <FormMessage />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {field.value?.length || 0}/300 characters
+                                        </p>
                                     </FormItem>
                                 )}
                             />
 
-                            <div className="flex justify-end gap-2">
-                                <Button type="button" variant="outline" onClick={() => setIsEditBioOpen(false)}>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsEditBioOpen(false)}
+                                >
                                     Cancel
                                 </Button>
                                 <Button type="submit">

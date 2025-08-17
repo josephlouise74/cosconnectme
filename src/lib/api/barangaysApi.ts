@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import ky, { HTTPError } from "ky";
+import { Barangay } from "../types/philippineDataType";
 
 const API_BASE_URL = "https://tupv-dormitory-server-4pgk.onrender.com/api/v1";
 
@@ -27,12 +28,7 @@ const apiClient = ky.create({
     }
 });
 
-export type Barangay = {
-    _id: string;
-    barangay_id: number;
-    municipality_id: number;
-    barangay_name: string;
-};
+
 
 export type PaginationData = {
     totalCount: number;

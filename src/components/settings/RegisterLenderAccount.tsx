@@ -20,7 +20,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { ZodIssue } from "zod";
 import { BusinessInfoSection } from "../Lender/SignUpForms/BusinessInfoSection";
 import { DocumentVerificationSection } from "../Lender/SignUpForms/DocumentVerificationInfoSection";
 

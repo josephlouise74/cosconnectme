@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { useDeletePostById } from '@/lib/apis/communityApiV2'
+
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 
 import { AnimatePresence, motion } from 'framer-motion'
@@ -114,8 +114,8 @@ const PostsListBorrower = memo(({ profileData }: PostsListProps) => {
     })
 
     const { userRolesData, isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
-    const { deletePostById, isDeleting } = useDeletePostById();
-
+    /*     const { deletePostById, isDeleting } = useDeletePostById();
+     */
     // Ref for infinite scrolling
     const { ref, inView } = useInView({
         threshold: 0.5,
@@ -182,13 +182,13 @@ const PostsListBorrower = memo(({ profileData }: PostsListProps) => {
         }
 
         try {
-            await deletePostById({ postId, author_id: userRolesData.user_id });
-            // Remove post from local state
-            dispatch({ type: 'REMOVE_POST', payload: postId });
+            /*     await deletePostById({ postId, author_id: userRolesData.user_id });
+                // Remove post from local state
+                dispatch({ type: 'REMOVE_POST', payload: postId }); */
         } catch (error: any) {
             // Error handled by hook toast
         }
-    }, [isAuthenticated, userRolesData?.user_id, deletePostById]);
+    }, [isAuthenticated, userRolesData?.user_id, /* deletePostById */]);
 
     // Individual Post Component
     const PostItem = memo(({ post, index }: { post: Post; index: number }) => {
@@ -249,9 +249,9 @@ const PostsListBorrower = memo(({ profileData }: PostsListProps) => {
                                             <DropdownMenuItem
                                                 onClick={() => handleDeletePost(post.id)}
                                                 className="text-red-600 focus:text-red-600 cursor-pointer"
-                                                disabled={authLoading || isDeleting}
+                                            /*    disabled={authLoading || isDeleting} */
                                             >
-                                                {isDeleting ? 'Deleting...' : 'Delete Post'}
+                                                {/*   {isDeleting ? 'Deleting...' : 'Delete Post'} */}
                                             </DropdownMenuItem>
                                         </>
                                     )}
