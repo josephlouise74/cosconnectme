@@ -7,13 +7,14 @@ import Header from "@/components/layout/Header"
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
 
 import { usePathname } from "next/navigation"
+import SidebarLender from "@/components/Lender/SidebarLender/SideBarLender"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { currentRole, isLoading } = useSupabaseAuth()
+  const { currentRole, isLoading, isAuthenticated } = useSupabaseAuth()
   const pathname = usePathname()
 
   if (isLoading) {
@@ -29,6 +30,7 @@ export default function DashboardLayout({
       <div className="flex flex-1 flex-col w-full mx-auto">
         <div className={`flex-1 flex ${currentRole === "lender" ? "flex-row" : "flex-col"}`}>
           {currentRole !== "lender" && <Header />}
+          {isAuthenticated && currentRole === "lender" && <SidebarLender />}
 
           <main className="flex-1 overflow-auto min-w-[320px]">{children}</main>
 

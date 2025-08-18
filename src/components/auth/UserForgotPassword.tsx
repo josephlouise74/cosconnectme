@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { cn, COLORS, TYPOGRAPHY } from "@/lib/utils";
+import { cn, COLORS, TYPOGRAPHY, } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyRound, Loader2, Mail } from "lucide-react";
 import Image from "next/image";

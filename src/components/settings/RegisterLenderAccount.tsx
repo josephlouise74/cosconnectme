@@ -9,7 +9,6 @@ import { FullScreenLoader } from "@/components/ui/full-screen-loader";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRegisterLenderAccount } from "@/lib/api/lenderApi";
-/* import { useRegisterLenderAccount } from "@/lib/apis/lenderApiV2"; */
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth";
 import { LenderSignUpFormData, lenderSignUpSchema } from "@/lib/zodSchema/lenderSchema";
 import { handleSingleImageUpload } from "@/utils/supabase/fileUpload";
@@ -22,6 +21,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { BusinessInfoSection } from "../Lender/SignUpForms/BusinessInfoSection";
 import { DocumentVerificationSection } from "../Lender/SignUpForms/DocumentVerificationInfoSection";
+import { LenderFormDataType } from "@/lib/types/lenderType";
 
 // Types
 interface FileUploadState {
@@ -124,7 +124,6 @@ const RegisterSellerAccount = () => {
         mode: "onChange" // Optimize validation
     });
 
-
     const { userRolesData } = useSupabaseAuth();
     const {
         mutateAsync: registerLenderAccount,
@@ -167,8 +166,14 @@ const RegisterSellerAccount = () => {
         setFileUploadState(prev => ({ ...prev, isUploading: true, uploadProgress: 0 }));
 
         try {
-            // Explicitly copy all fields, including businessEmail
-            const preparedData: LenderSignUpFormData = { ...data, businessEmail: data.businessEmail };
+            // Create a deep copy of the data to avoid mutating the original
+            const preparedData: LenderSignUpFormData = { 
+                ...data,
+                businessEmail: data.businessEmail,
+                businessDescription: data.businessDescription || '', // Ensure businessDescription is always a string
+                city: data.city || { id: '', name: '' } // Ensure city is always an object
+            };
+            
             const uploadTasks: Promise<void>[] = [];
             let completedUploads = 0;
 
@@ -176,66 +181,80 @@ const RegisterSellerAccount = () => {
                 completedUploads++;
                 setFileUploadState(prev => ({
                     ...prev,
-                    uploadProgress: (completedUploads / uploadTasks.length) * 100
+                    uploadProgress: Math.min(Math.round((completedUploads / uploadTasks.length) * 100), 100)
                 }));
             };
 
             // Batch file uploads
-            const addUploadTask = (
-                file: File | null | string,
+            const addUploadTask = async (
+                file: File | null | string | undefined,
                 key: keyof LenderSignUpFormData,
                 errorMessage: string
             ) => {
                 if (file instanceof File) {
                     uploadTasks.push(
-                        uploadFile(file, errorMessage).then(url => {
-                            (preparedData as any)[key] = url;
-                            updateProgress();
-                        })
+                        uploadFile(file, errorMessage)
+                            .then(url => {
+                                (preparedData as any)[key] = url;
+                                updateProgress();
+                            })
+                            .catch(error => {
+                                console.error(`Error uploading ${key}:`, error);
+                                throw new Error(`${errorMessage}: ${error.message}`);
+                            })
                     );
+                } else if (file && typeof file === 'string') {
+                    // If it's already a string (URL), use it directly
+                    (preparedData as any)[key] = file;
                 }
             };
 
-            // Handle Valid ID File Upload
-            if (data.hasValidId && data.validIdFile instanceof File) {
-                addUploadTask(data.validIdFile, 'validIdFile', "Failed to upload valid ID");
+            try {
+                // Handle Valid ID File Upload
+                if (data.hasValidId) {
+                    await addUploadTask(data.validIdFile, 'validIdFile', "Failed to upload valid ID");
+                } else {
+                    // Handle Secondary ID Files Upload
+                    await Promise.all([
+                        addUploadTask(data.secondaryIdFile1, 'secondaryIdFile1', "Failed to upload first secondary ID"),
+                        addUploadTask(data.secondaryIdFile2, 'secondaryIdFile2', "Failed to upload second secondary ID")
+                    ]);
+                }
+
+                // Handle Selfie with ID Upload
+                await addUploadTask(data.selfieWithId, 'selfieWithId', "Failed to upload selfie with ID");
+
+                // Handle Store Documents Upload (only for STORE type)
+                if (data.businessType === "STORE") {
+                    await Promise.all([
+                        addUploadTask(data.upload_dti_certificate, 'upload_dti_certificate', "Failed to upload DTI Certificate"),
+                        addUploadTask(data.upload_business_permit, 'upload_business_permit', "Failed to upload Business Permit"),
+                        addUploadTask(data.upload_storefront_photo, 'upload_storefront_photo', "Failed to upload Storefront Photo")
+                    ]);
+                }
+
+                // Execute all uploads concurrently
+                if (uploadTasks.length > 0) {
+                    await Promise.all(uploadTasks);
+                }
+
+                return preparedData;
+            } catch (error) {
+                console.error("Error in file uploads:", error);
+                throw error; // Re-throw to be caught by the outer try-catch
             }
-
-            // Handle Secondary ID Files Upload
-            if (!data.hasValidId) {
-                addUploadTask(data.secondaryIdFile1, 'secondaryIdFile1', "Failed to upload first secondary ID");
-                addUploadTask(data.secondaryIdFile2, 'secondaryIdFile2', "Failed to upload second secondary ID");
-            }
-
-            // Handle Selfie with ID Upload
-            addUploadTask(data.selfieWithId, 'selfieWithId', "Failed to upload selfie with ID");
-
-            // Handle Store Documents Upload (only for STORE type)
-            if (data.businessType === "STORE") {
-                addUploadTask(data.upload_dti_certificate, 'upload_dti_certificate', "Failed to upload DTI Certificate");
-                addUploadTask(data.upload_business_permit, 'upload_business_permit', "Failed to upload Business Permit");
-                addUploadTask(data.upload_storefront_photo, 'upload_storefront_photo', "Failed to upload Storefront Photo");
-            }
-
-            // Execute all uploads concurrently
-            if (uploadTasks.length > 0) {
-                await Promise.all(uploadTasks);
-            }
-
-            // Ensure businessEmail is always present
-            if (!preparedData.businessEmail) {
-                preparedData.businessEmail = data.businessEmail;
-            }
-
-            return preparedData;
         } finally {
             setFileUploadState(prev => ({ ...prev, isUploading: false, uploadProgress: 0 }));
         }
     }, [uploadFile]);
 
     // Optimized data formatting
-    const formatLenderData = useCallback((preparedData: LenderSignUpFormData, termsAccepted: boolean) => ({
-        business_info: {
+    const formatLenderData = useCallback((preparedData: LenderSignUpFormData, termsAccepted: boolean) => {
+        if (!termsAccepted) {
+            throw new Error("You must accept the terms and conditions");
+        }
+
+        const businessInfo = {
             business_name: preparedData.businessName,
             business_type: preparedData.businessType,
             business_description: preparedData.businessDescription,
@@ -249,14 +268,15 @@ const RegisterSellerAccount = () => {
             province: preparedData.province,
             region: preparedData.region,
             zip_code: preparedData.zipCode,
-            terms_and_conditions: termsAccepted ? "Accepted" : "Not Accepted",
+            terms_and_conditions: "Accepted" as const,
             ...(preparedData.businessType === "STORE" && {
                 upload_dti_certificate: preparedData.upload_dti_certificate,
                 upload_business_permit: preparedData.upload_business_permit,
                 upload_storefront_photo: preparedData.upload_storefront_photo,
             }),
-        },
-        identification: {
+        };
+
+        const identification = {
             has_valid_id: preparedData.hasValidId,
             selfie_with_id: preparedData.selfieWithId,
             ...(preparedData.hasValidId
@@ -271,61 +291,90 @@ const RegisterSellerAccount = () => {
                     secondary_id_type_2: preparedData.secondaryIdType2,
                     secondary_id_file_2: preparedData.secondaryIdFile2,
                 }),
-        },
-        personal_info: {
+        };
+
+        const personalInfo = {
             first_name: userRolesData?.personal_info?.first_name || "",
             last_name: userRolesData?.personal_info?.last_name || "",
             full_name: userRolesData?.personal_info?.full_name || "",
             username: userRolesData?.username || "",
             email: userRolesData?.email || "",
             phone_number: userRolesData?.personal_info?.phone_number || ""
-        },
-    }), [userRolesData]);
+        };
+
+        // Explicitly type the return value to match LenderFormDataType
+        const result: Omit<LenderFormDataType, 'terms_and_conditions'> & { terms_and_conditions: 'Accepted' } = {
+            business_info: businessInfo as any,
+            identification: identification as any, // Type assertion needed due to complex type
+            personal_info: personalInfo,
+            terms_and_conditions: "Accepted"
+        };
+
+        return result;
+    }, [userRolesData]);
 
     // Form submission handler
     const onSubmit = useCallback(async (values: LenderSignUpFormData) => {
         try {
             setProfileError(""); // Reset error on submit
+            
             // Validate personal info fields
             const requiredFields = [
-                userRolesData?.personal_info?.first_name,
-                userRolesData?.personal_info?.last_name,
-                userRolesData?.username,
-                userRolesData?.email,
-                userRolesData?.personal_info?.phone_number
+                { value: userRolesData?.personal_info?.first_name, name: 'First Name' },
+                { value: userRolesData?.personal_info?.last_name, name: 'Last Name' },
+                { value: userRolesData?.username, name: 'Username' },
+                { value: userRolesData?.email, name: 'Email' },
             ];
-            if (requiredFields.some(field => !field || field.trim() === "")) {
+            
+            const missingFields = requiredFields
+                .filter(field => !field.value || field.value.trim() === "")
+                .map(field => field.name);
+                
+            if (missingFields.length > 0) {
                 setProfileError(
-                    `Some required personal information is missing. Please update your profile before registering as a lender.`
+                    `Missing required profile information: ${missingFields.join(', ')}. Please update your profile before registering as a lender.`
                 );
                 return;
             }
+
             if (!termsAccepted) {
-                toast.error("Please accept the Terms and Conditions to proceed");
+                toast.error("You must accept the terms and conditions to proceed");
                 return;
             }
 
-            const preparedData = await prepareFormData(values);
-            const lenderData = formatLenderData(preparedData, termsAccepted);
-
-            const userId = userRolesData?.user_id;
-            if (!userId) {
-                throw new Error("User ID is required");
+            // Manually trigger validation for all fields
+            const isValid = await form.trigger();
+            if (!isValid) {
+                // If validation fails, the form will show the errors automatically
+                return;
             }
 
-            console.log("lenderData", lenderData);
+            try {
+                setFileUploadState(prev => ({ ...prev, isUploading: true }));
+                const preparedData = await prepareFormData(values);
+                const lenderData = formatLenderData(preparedData, termsAccepted);
 
-            await registerLenderAccount({
-                userId,
-                lenderData: lenderData as any,
-            });
+                const userId = userRolesData?.user_id;
+                if (!userId) {
+                    throw new Error("User ID is required");
+                }
 
+                await registerLenderAccount({
+                    userId,
+                    lenderData: lenderData
+                });
 
-            window.location.reload();
-
+                toast.success("Lender registration submitted successfully!");
+                window.location.reload();
+            } catch (error: any) {
+                console.error("Registration error:", error);
+                toast.error(error.response?.data?.message || error.message || "Registration failed. Please try again.");
+            } finally {
+                setFileUploadState(prev => ({ ...prev, isUploading: false }));
+            }
         } catch (error: any) {
-            console.error("Registration error:", error);
-            toast.error(error.message || "Registration failed. Please try again.");
+            console.error("Form submission error:", error);
+            toast.error(error.message || "An error occurred while processing your request.");
         }
     }, [termsAccepted, prepareFormData, formatLenderData, userRolesData?.user_id, registerLenderAccount, userRolesData]);
 

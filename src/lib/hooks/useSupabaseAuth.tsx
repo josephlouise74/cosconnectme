@@ -1,13 +1,12 @@
 "use client"
 
 import { createClient } from "@/utils/supabase/client"
-import { useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 
-import type { User } from "@supabase/supabase-js"
 import type { UserRole } from "@/lib/types/userType"
-import { useGetUserRoles } from "../api/userApi"
+import type { User } from "@supabase/supabase-js"
 import { signOut } from "actions/auth"
+import { useGetUserRoles } from "../api/userApi"
 
 interface AuthState {
     isAuthenticated: boolean
@@ -23,8 +22,8 @@ export const useSupabaseAuth = () => {
         user: null,
         isLoading: true,
     })
-
-    const router = useRouter()
+    /* 
+        const router = useRouter() */
 
     const updateAuthState = useCallback((updates: Partial<AuthState>) => {
         setAuthState((prev) => ({
@@ -58,7 +57,7 @@ export const useSupabaseAuth = () => {
         const supabase = createClient()
         let mounted = true
 
-        const handleAuthChange = async (event: string, session: any) => {
+        const handleAuthChange = async (_: string, session: any) => {
             if (!mounted) return
 
             const user = session?.user || null

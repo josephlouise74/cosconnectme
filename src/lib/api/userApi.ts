@@ -9,6 +9,49 @@ import { toast } from "sonner";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v2';
 
+
+export const useGetUserRoles = (userId: string, enabled = true) => {
+    const getUserRolesApiRequest = async (userId: string): Promise<UserRolesResponseData> => {
+        if (!userId?.trim()) {
+            throw new Error("User ID is required")
+        }
+
+        try {
+            const { data } = await axiosApiClient.get<UserRolesResponse>(`user/roles/${userId}`)
+
+            if (!data.success || !data.data) {
+                throw new Error(data.message || "Failed to fetch user roles")
+            }
+
+            return data.data
+        } catch (error) {
+            console.log("error", error)
+            const apiError = error as any
+            const errorMessage = apiError.response?.data?.message || apiError.message || "Failed to fetch user roles"
+            throw new Error(errorMessage)
+        }
+    }
+
+    const query = useQuery<UserRolesResponseData, Error>({
+        queryKey: ["userRoles", userId],
+        queryFn: () => getUserRolesApiRequest(userId),
+        enabled: enabled && !!userId?.trim(),
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+        retry: 1,
+    })
+
+    return {
+        data: query.data,
+        error: query.error,
+        isLoading: query.isLoading,
+        isError: query.isError,
+        isSuccess: query.isSuccess,
+        isFetching: query.isFetching,
+        refetch: query.refetch,
+    }
+}
+
 /**
  * Custom hook to fetch user profile data by username
  * @param username - The username of the user profile to fetch
@@ -156,47 +199,7 @@ export const useUpdatePersonalInfo = () => {
 
 
 
-export const useGetUserRoles = (userId: string, enabled = true) => {
-    const getUserRolesApiRequest = async (userId: string): Promise<UserRolesResponseData> => {
-        if (!userId?.trim()) {
-            throw new Error("User ID is required")
-        }
 
-        try {
-            const { data } = await axiosApiClient.get<UserRolesResponse>(`user/roles/${userId}`)
-
-            if (!data.success || !data.data) {
-                throw new Error(data.message || "Failed to fetch user roles")
-            }
-
-            return data.data
-        } catch (error) {
-            console.log("error", error)
-            const apiError = error as any
-            const errorMessage = apiError.response?.data?.message || apiError.message || "Failed to fetch user roles"
-            throw new Error(errorMessage)
-        }
-    }
-
-    const query = useQuery<UserRolesResponseData, Error>({
-        queryKey: ["userRoles", userId],
-        queryFn: () => getUserRolesApiRequest(userId),
-        enabled: enabled && !!userId?.trim(),
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000, // 10 minutes
-        retry: 1,
-    })
-
-    return {
-        data: query.data,
-        error: query.error,
-        isLoading: query.isLoading,
-        isError: query.isError,
-        isSuccess: query.isSuccess,
-        isFetching: query.isFetching,
-        refetch: query.refetch,
-    }
-}
 
 
 export const useSwitchRole = () => {
@@ -209,26 +212,54 @@ export const useSwitchRole = () => {
         userId: string
         targetRole: "borrower" | "lender"
     }): Promise<SwitchRoleResponse> => {
-        if (!userId?.trim()) {
-            throw new Error("User ID is required")
-        }
+        try {
+            if (!userId?.trim()) {
+                throw new Error("User ID is required")
+            }
 
-        if (!targetRole || !["borrower", "lender"].includes(targetRole)) {
-            throw new Error("Valid target role (borrower or lender) is required")
-        }
+            if (!targetRole || !["borrower", "lender"].includes(targetRole)) {
+                throw new Error("Valid target role (borrower or lender) is required")
+            }
 
-        const response = await axiosApiClient.post(`user/switch-role/${userId}`, { targetRole })
-        return response.data
+            console.log(`Switching to ${targetRole} role for user ${userId}`)
+
+            const response = await axiosApiClient.patch(`user/switch-role/${userId}?targetRole=${encodeURIComponent(targetRole)}`)
+            console.log("Switch role response:", response.data)
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || "Failed to switch role")
+            }
+
+            return response.data
+        } catch (error: any) {
+            console.error("Error in switchRoleApiRequest:", error)
+            const errorMessage = error.response?.data?.message || error.message || "Failed to switch role"
+            console.error("Error details:", {
+                status: error.response?.status,
+                data: error.response?.data,
+                config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    data: error.config?.data
+                }
+            })
+            throw new Error(errorMessage)
+        }
     }
 
     const mutation = useMutation({
         mutationFn: switchRoleApiRequest,
         onSuccess: (data, variables) => {
+            console.log("Role switch successful:", data)
             toast.success(data.message || "Role switched successfully!")
-            // Invalidate user roles query to refetch updated data
-            queryClient.invalidateQueries({ queryKey: ["userRoles", variables.userId] })
+            // Invalidate relevant queries
+            Promise.all([
+                queryClient.invalidateQueries({ queryKey: ["userRoles", variables.userId] }),
+                queryClient.invalidateQueries({ queryKey: ["userProfile"] })
+            ]).catch(console.error)
         },
         onError: (error: Error) => {
+            console.error("Mutation error:", error)
             toast.error(error.message || "Failed to switch role")
         },
     })

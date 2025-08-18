@@ -2,47 +2,17 @@
 import { z } from "zod";
 
 
-export const primaryIdTypes = [
-  "NATIONAL_ID", // PhilSys ID
-  "PASSPORT",
-  "DRIVERS_LICENSE",
-  "UMID",
-  "SSS_ID",
-  "GSIS_ID",
-  "PRC_ID",
-  "POSTAL_ID",
-  "PHILHEALTH_ID",
-  "VOTERS_ID",
-  "SENIOR_CITIZEN_ID",
-  "PWD_ID",
-  "INTEGRATED_BAR_ID",
-  "OFW_ID"
-] as const;
-
-export const secondaryIdTypes = [
-  "BARANGAY_ID",
-  "POLICE_CLEARANCE",
-  "NBI_CLEARANCE",
-  "BIRTH_CERTIFICATE",
-  "TIN_ID",
-  "PAGIBIG_ID",
-  "COMPANY_ID",
-  "SCHOOL_ID",
-  "POSTAL_ID",
-  "BRGY_CLEARANCE",
-  "CEDULA",
-  "INSURANCE_ID",
-  "BIR_ID",
-  "OWWA_ID",
-  "MARINA_ID"
-] as const;
+// ID types are now handled as any type
 
 export const lenderSignUpSchema = z
   .object({
     businessName: z.string().min(2, "Business name is required").max(50, "Business name must be 50 characters or less"),
-    businessType: z.enum(["STORE", "INDIVIDUAL"], {
-      required_error: "Please select your business type",
+    businessType: z.string().min(1, {
+      message: "Please select your business type"
     }),
+    businessDescription: z.string()
+      .min(10, "Business description must be at least 10 characters")
+      .max(500, "Business description must be 500 characters or less"),
     // Address fields
     region: z.string().min(1, "Region is required"),
     province: z.string().min(1, "Province is required"),
@@ -57,22 +27,15 @@ export const lenderSignUpSchema = z
     businessEmail: z.string().email("Invalid business email address").min(1, "Business email is required"),
     business_telephone: z.string().optional(),
     hasValidId: z.boolean(),
-    validIdType: z.enum(primaryIdTypes, {
-      required_error: "Please select valid ID type",
-    }).optional(),
+    validIdType: z.any().optional(),
     validIdNumber: z.string().optional(),
     validIdFile: z.any().optional(),
-    secondaryIdType1: z.enum(secondaryIdTypes, {
-      required_error: "Please select secondary ID type",
-    }).optional(),
+    secondaryIdType1: z.any().optional(),
     secondaryIdFile1: z.any().optional(),
-    secondaryIdType2: z.enum(secondaryIdTypes, {
-      required_error: "Please select secondary ID type",
-    }).optional(),
+    secondaryIdType2: z.any().optional(),
     secondaryIdFile2: z.any().optional(),
 
     selfieWithId: z.any().optional(),
-    businessDescription: z.string().max(500, "Business description must be 500 characters or less").optional(),
     upload_dti_certificate: z.any().optional(),
     upload_business_permit: z.any().optional(),
     upload_storefront_photo: z.any().optional(),

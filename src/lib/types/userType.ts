@@ -71,23 +71,42 @@ export interface UserAddressInfo {
         id: string
         name: string
     } | null
+    business_address?: string | null
+}
+
+export interface UserBusinessDocuments {
+    upload_dti_certificate?: string | null
+    upload_business_permit?: string | null
+    upload_storefront_photo?: string | null
 }
 
 export interface UserBusinessInfo {
+    id: string
     business_name?: string | null
     business_description?: string | null
     business_type?: string | null
     business_phone_number?: string | null
     business_telephone?: string | null
     business_email?: string | null
+    business_profile_image?: string | null
+    business_background_image?: string | null
     is_verified: boolean
-    business_address?: UserAddressInfo
-    documents?: {
-        upload_dti_certificate?: string | null
-        upload_business_permit?: string | null
-        upload_storefront_photo?: string | null
-    }
+    rejection_reason?: string | null
+    terms_and_conditions?: string | null
+    verified_at?: string | null
+    verified_by?: string | null
+    created_at: string
+    updated_at: string
+    address: UserAddressInfo
+    documents?: UserBusinessDocuments
 }
+
+export interface UserRolesResponse {
+    success: boolean
+    message?: string
+    data?: UserRolesResponseData
+}
+
 
 export interface UserRolesResponseData {
     user_id: string
@@ -109,11 +128,6 @@ export interface UserRolesResponseData {
     business_info?: UserBusinessInfo
 }
 
-export interface UserRolesResponse {
-    success: boolean
-    message?: string
-    data?: UserRolesResponseData
-}
 
 export interface SwitchRoleRequest {
     targetRole: UserRole
