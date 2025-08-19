@@ -1,10 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 
-import { UploadCloud, ShoppingBag, Calendar, Shield } from 'lucide-react';
+import { Calendar, Shield, ShoppingBag, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
-import React, { lazy, memo, Suspense } from 'react';
-import { CostumeSchema } from '../../../lib/zodSchema/costumeSchema';
+import React, { memo, Suspense } from 'react';
+import ProductAddOnsFormSection from './Create-Components/CostumeAddOnsFormSection';
 
 interface ProductPreviewProps {
     formData: any;
@@ -24,7 +24,7 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({
     mainImages,
     existingImages,
 }) => {
-    const selectedType = formData.productType?.find(type => type.type && type.price);
+    const selectedType = formData.productType?.find((type: any) => type.type && type.price);
     const basePrice = selectedType ? parseFloat(selectedType.price) : 0;
     const discountAmount = formData.discount ? parseFloat(formData.discount) : 0;
     const salePrice = basePrice && discountAmount > 0

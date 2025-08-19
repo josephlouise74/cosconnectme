@@ -2,6 +2,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { COSTUME_TYPE } from '@/lib/types/create-costume-type';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Heart, MapPin, Tag } from 'lucide-react'
 import Image from 'next/image'
@@ -203,14 +204,14 @@ const FeaturedCustomeSection = ({ costumes, isLoading, error }: FeaturedCustomeS
                                             </p>
                                         )}
                                     </div>
-                                    {/*  <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2">
                                         <Badge variant="outline" className="text-xs">
-                                            {PRODUCT_TYPES.find(type => type.value === product.mainOffer.type)?.label || product.mainOffer.type}
+                                            {COSTUME_TYPE.find(type => type.value === product.mainOffer.type)?.label || product.mainOffer.type}
                                         </Badge>
                                         <span className="text-sm text-text-muted dark:text-text-muted-dark">
                                             {product.mainOffer.name}
                                         </span>
-                                    </div> */}
+                                    </div>
                                 </div>
 
                                 <p className="text-sm text-text-muted dark:text-text-muted-dark line-clamp-2">

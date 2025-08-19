@@ -1,99 +1,46 @@
-// ===============================
-// UNIFIED TYPES
-// ===============================
+// src/types/marketplace.ts
+
+export interface MarketplaceCostume {
+    id: string
+    name: string
+    brand: string
+    category: string
+    gender: string
+    sizes: string
+    listing_type: "rent" | "sell" // extendable if needed
+    pricing: {
+        rental?: {
+            price: string
+            security_deposit: string
+        }
+        sale?: {
+            price: string
+        }
+    }
+    main_images: {
+        front: string
+        back: string
+    }
+    view_count: number
+    favorite_count: number
+    created_at: string
+    tags: string[]
+}
 
 export interface Pagination {
-    currentPage: number;
-    totalPages: number;
-    totalItems: number;
-    itemsPerPage: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
+    page: number
+    limit: number
+    total_count: number
+    total_pages: number
+    has_next_page: boolean
+    has_previous_page: boolean
 }
 
-export interface CostumeAddOn {
-    id: string;
-    name: string;
-    image: string;
-    price: string;
-    description: string;
-}
-
-export interface CostumeImage {
-    url: string;
-    order: number;
-}
-
-export interface RentOffer {
-    type: string;
-    price: string;
-}
-
-export interface Sale {
-    price: string;
-    discount: number;
-}
-
-export type ListingType = 'rent' | 'sale' | 'both';
-export type Gender = 'male' | 'female' | 'unisex';
-export type CostumeStatus = 'active' | 'inactive' | 'pending';
-
-export interface CostumeItem {
-    id: string;
-    name: string;
-    brand: string;
-    category: string;
-    description: string;
-    gender: Gender;
-    tags: string[];
-    extended_days: string;
-    security_deposit: string;
-    listing_type: ListingType;
-    main_images: {
-        front: string;
-        back: string;
-    };
-    additional_images: CostumeImage[];
-    lender_user_id: string;
-    lender_user_email: string;
-    lender_user_username: string;
-    add_ons: CostumeAddOn[];
-    selected_costume_type: string;
-    sizes: string;
-    status: CostumeStatus;
-    is_available: boolean;
-    created_at: string;
-    updated_at: string;
-    rent?: {
-        main_rent_offer: RentOffer;
-        alternative_rent_offers: RentOffer[];
-    };
-    sale?: Sale;
-}
-
-export interface ApiResponse<T = any> {
-    success: boolean;
-    data: T;
-    message: string;
-}
-
-export interface PaginatedApiResponse<T = any> extends ApiResponse<T> {
-    pagination: Pagination;
-}
-
-export interface PaginationParams {
-    page?: number;
-    limit?: number;
-}
-
-export interface ApiErrorResponse {
-    success: false;
-    message: string;
-    errors?: Array<{
-        code: string;
-        expected?: string;
-        received?: string;
-        path: (string | number)[];
-        message: string;
-    }>;
+export interface GetMarketplaceCostumesResponse {
+    success: boolean
+    message: string
+    data: {
+        costumes: MarketplaceCostume[]
+        pagination: Pagination
+    }
 }

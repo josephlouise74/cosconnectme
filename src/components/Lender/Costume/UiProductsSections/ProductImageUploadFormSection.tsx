@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import FileUploader from './CostumeFileUploader';
+import FileUploader from './ProductFileUploader';
 import { AdditionalImageType, MainImagesType } from '@/types/costumeTypeV2';
 
 interface ProductImagesUploadProps {

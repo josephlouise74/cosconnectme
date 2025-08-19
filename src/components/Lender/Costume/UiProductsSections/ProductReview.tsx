@@ -1,15 +1,15 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ProductFormValues } from '@/lib/zodFormSchema/productSchema';
+import { CostumeFormValues } from '@/lib/zodFormSchema/productSchema';
 
 import { UploadCloud, ShoppingBag, Calendar, Shield } from 'lucide-react';
 import Image from 'next/image';
 import React, { lazy, memo, Suspense } from 'react';
 
-const ProductAddOnsFormSection = lazy(() => import('./CostumeAddOnsFormSection'));
+const ProductAddOnsFormSection = lazy(() => import('./ProductAddOnsFormSection'));
 
 interface ProductPreviewProps {
-    formData: ProductFormValues;
+    formData: CostumeFormValues;
     mainImages: {
         front: File | null;
         back: File | null;

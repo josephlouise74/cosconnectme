@@ -7,7 +7,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { type CostumeValues } from '@/lib/zodSchema/costumeSchema';
+import { CostumeFormValues } from '@/lib/zodFormSchema/productSchema';
 import { Image as ImageIcon, Plus, Trash2, Upload, X } from 'lucide-react';
 import Image from 'next/image';
 import React, { memo, useCallback, useState } from 'react';
@@ -38,7 +38,7 @@ interface ProductAddOnsFormSectionProps {
 
 const ProductAddOnsFormSection: React.FC<ProductAddOnsFormSectionProps> = memo(({ className, product }) => {
     // Access form context from the parent form
-    const form = useFormContext<CostumeValues & { addOns: ProductAddOn[] }>();
+    const form = useFormContext<CostumeFormValues & { addOns: ProductAddOn[] }>();
 
     // Use fieldArray to manage dynamic fields
     const { fields, append, remove } = useFieldArray({

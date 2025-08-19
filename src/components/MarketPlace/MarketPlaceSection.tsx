@@ -10,17 +10,14 @@ import { useForm } from 'react-hook-form'
 
 // API Hooks
 import { useFetchAllCategories } from '@/lib/api/categoryApi'
-import { useGetAllCostumeForMarketPlace } from '@/lib/api/marketplaceApi'
+
 
 // Auth Hook
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 
 // Types
 import { Category } from '@/lib/types/categoryType'
-import {
-  CostumeItem,
-  Gender
-} from '@/lib/types/marketplaceType'
+import { MarketplaceCostume } from '@/lib/types/marketplaceType'
 
 // Components
 import CostumeGrid from './components/CostumeGrid'
@@ -29,6 +26,7 @@ import MarketplacePagination from './components/MarketPlacePagination'
 import SearchBar from './components/SearchBar'
 
 // Schema
+import { useGetAllCostumeForMarketPlace } from '@/lib/api/marketplaceApi'
 import { FilterFormValues, filterFormSchema } from './filterSchema'
 
 // Constants
@@ -37,9 +35,9 @@ const DEFAULT_PRICE_RANGE: [number, number] = [0, 10000]
 
 // Filter configuration
 interface MarketplaceFilters {
-  search: string;
-  category: string;
-  gender?: Gender;
+  search?: string;
+  category?: string;
+  gender?: string;
   minPrice?: number;
   maxPrice?: number;
   tags?: string[];
@@ -54,6 +52,8 @@ const MarketPlaceSection = () => {
   // State management
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchSubmitted, setIsSearchSubmitted] = useState(false)
 
   const router = useRouter()
 
@@ -79,42 +79,53 @@ const MarketPlaceSection = () => {
   const filters = form.watch()
 
   // Helper functions
-  const getCostumePrice = useCallback((costume: CostumeItem): number => {
-    const prices: number[] = []
-
-    if (costume.rent?.main_rent_offer?.price) {
-      prices.push(parseFloat(costume.rent.main_rent_offer.price))
+  const getCostumePrice = useCallback((costume: MarketplaceCostume): number => {
+    // Extract rental price
+    if (costume.pricing?.rental?.price) {
+      return parseFloat(costume.pricing.rental.price)
     }
 
-    if (costume.sale?.price) {
-      const basePrice = parseFloat(costume.sale.price)
-      const discountedPrice = basePrice * (1 - costume.sale.discount / 100)
-      prices.push(discountedPrice)
+    // Extract sale price
+    if (costume.pricing?.sale?.price) {
+      return parseFloat(costume.pricing.sale.price)
     }
 
-    return prices.length ? Math.min(...prices) : 0
+    return 0
   }, [])
 
   const applyClientFilters = useCallback((
-    costume: CostumeItem,
+    costume: MarketplaceCostume,
     filterValues: FilterFormValues
   ): boolean => {
     // Search filter
-    if (filterValues.search) {
-      const searchTerm = filterValues.search.toLowerCase()
+    if (filterValues.search && filterValues.search.trim()) {
+      const searchTerm = filterValues.search.toLowerCase().trim()
       const searchableContent = [
-        costume.name,
-        costume.brand,
-        costume.category,
-        costume.description,
-        ...costume.tags
+        costume.name || '',
+        costume.brand || '',
+        costume.category || '',
+        ...(costume.tags || [])
       ].join(' ').toLowerCase()
 
       if (!searchableContent.includes(searchTerm)) return false
     }
 
+    // Category filter
+    if (filterValues.category && filterValues.category.trim()) {
+      if (costume.category !== filterValues.category) {
+        return false
+      }
+    }
+
+    // Gender filter
+    if (filterValues.gender && filterValues.gender.trim()) {
+      if (costume.gender !== filterValues.gender) {
+        return false
+      }
+    }
+
     // Price range filter
-    if (filterValues.priceRange) {
+    if (filterValues.priceRange && Array.isArray(filterValues.priceRange)) {
       const [minPrice, maxPrice] = filterValues.priceRange
       const costumePrice = getCostumePrice(costume)
 
@@ -122,9 +133,9 @@ const MarketPlaceSection = () => {
     }
 
     // Tags filter
-    if (filterValues.tags?.length) {
+    if (filterValues.tags && filterValues.tags.length > 0) {
       const hasMatchingTag = filterValues.tags.some(filterTag =>
-        costume.tags.some(costumeTag =>
+        costume.tags?.some(costumeTag =>
           costumeTag.toLowerCase().includes(filterTag.toLowerCase())
         )
       )
@@ -132,8 +143,8 @@ const MarketPlaceSection = () => {
     }
 
     // Size filter
-    if (filterValues.sizes?.length) {
-      const costumeSize = costume.sizes.toLowerCase()
+    if (filterValues.sizes && filterValues.sizes.length > 0) {
+      const costumeSize = (costume.sizes || '').toLowerCase()
       const hasMatchingSize = filterValues.sizes.some(size =>
         costumeSize.includes(size.toLowerCase())
       )
@@ -144,8 +155,8 @@ const MarketPlaceSection = () => {
   }, [getCostumePrice])
 
   const applySorting = useCallback((
-    a: CostumeItem,
-    b: CostumeItem,
+    a: MarketplaceCostume,
+    b: MarketplaceCostume,
     sortOption: string
   ): number => {
     switch (sortOption) {
@@ -154,41 +165,62 @@ const MarketPlaceSection = () => {
       case 'price-high':
         return getCostumePrice(b) - getCostumePrice(a)
       case 'popular':
-        // TODO: Implement popularity logic when available
-        return 0
+        return (b.favorite_count || 0) - (a.favorite_count || 0)
+      case 'most-viewed':
+        return (b.view_count || 0) - (a.view_count || 0)
       case 'newest':
       default:
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        const dateA = new Date(a.created_at || '').getTime()
+        const dateB = new Date(b.created_at || '').getTime()
+        return dateB - dateA
     }
   }, [getCostumePrice])
 
-  // API calls
-  const marketplaceFilters: MarketplaceFilters = useMemo(() => ({
-    category: filters.category || '',
-    gender: (filters.gender as Gender) || undefined,
-    search: filters.search || '',
-    minPrice: filters.priceRange?.[0],
-    maxPrice: filters.priceRange?.[1],
-    ...(filters.tags?.length ? { tags: filters.tags } : {}),
-    sort: filters.sort || 'newest',
-  }), [filters])
+  // Prepare API filters (without search)
+  const marketplaceFilters: MarketplaceFilters = useMemo(() => {
+    const apiFilters: MarketplaceFilters = {}
 
+    // Don't include search in API filters - we'll handle it client-side
+    if (filters.category && filters.category.trim()) {
+      apiFilters.category = filters.category
+    }
+
+    if (filters.gender && filters.gender.trim()) {
+      apiFilters.gender = filters.gender
+    }
+
+    if (filters.priceRange && Array.isArray(filters.priceRange)) {
+      const [minPrice, maxPrice] = filters.priceRange
+      if (minPrice > 0) apiFilters.minPrice = minPrice
+      if (maxPrice < 10000) apiFilters.maxPrice = maxPrice
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      apiFilters.tags = filters.tags
+    }
+
+    if (filters.sort && filters.sort.trim()) {
+      apiFilters.sort = filters.sort
+    }
+
+    return apiFilters
+  }, [filters])
+
+  // API calls
   const {
-    data: costumeData,
+    costumes,
+    pagination,
     isLoading: isLoadingCostumes,
     isError,
     error,
-    refetch
+    refetch,
+    isSuccess
   } = useGetAllCostumeForMarketPlace({
-    enabled: true,
     page: currentPage,
     limit: ITEMS_PER_PAGE,
-    filters: marketplaceFilters
+    filters: marketplaceFilters,
+    enabled: true
   })
-
-  // Extract data from the hook response
-  const allCostumes = costumeData?.data || []
-  const pagination = costumeData?.pagination
 
   const {
     data: categoriesData,
@@ -200,58 +232,59 @@ const MarketPlaceSection = () => {
 
   // Computed values
   const priceRange: [number, number] = useMemo(() => {
-    if (!allCostumes?.length) return DEFAULT_PRICE_RANGE
+    if (!costumes || costumes.length === 0) return DEFAULT_PRICE_RANGE
 
-    const prices = allCostumes.flatMap((costume: CostumeItem) => {
-      const costumesPrices: number[] = []
+    const prices = costumes.reduce((acc: number[], costume: MarketplaceCostume) => {
+      const price = getCostumePrice(costume)
+      if (price > 0) acc.push(price)
+      return acc
+    }, [])
 
-      // Extract rent prices
-      if (costume.rent?.main_rent_offer?.price) {
-        costumesPrices.push(parseFloat(costume.rent.main_rent_offer.price))
-      }
-
-      costume.rent?.alternative_rent_offers?.forEach(offer => {
-        if (offer.price) {
-          costumesPrices.push(parseFloat(offer.price))
-        }
-      })
-
-      // Extract sale price with discount
-      if (costume.sale?.price) {
-        const basePrice = parseFloat(costume.sale.price)
-        const discountedPrice = basePrice * (1 - costume.sale.discount / 100)
-        costumesPrices.push(discountedPrice)
-      }
-
-      return costumesPrices
-    })
-
-    return prices.length
+    return prices.length > 0
       ? [Math.min(...prices), Math.max(...prices)]
       : DEFAULT_PRICE_RANGE
-  }, [allCostumes])
+  }, [costumes, getCostumePrice])
 
   const categoryCounts: CategoryCount = useMemo(() => {
-    if (!allCostumes?.length) return { all: 0 }
+    if (!costumes || costumes.length === 0) return { all: 0 }
 
-    const counts: CategoryCount = { all: allCostumes.length }
+    const counts: CategoryCount = { all: costumes.length }
 
-    allCostumes.forEach((costume: CostumeItem) => {
-      const categoryName = costume.category
+    costumes.forEach((costume: MarketplaceCostume) => {
+      const categoryName = costume.category || 'Unknown'
       counts[categoryName] = (counts[categoryName] || 0) + 1
     })
 
     return counts
-  }, [allCostumes])
+  }, [costumes])
 
-  // Client-side filtering and sorting
+  // Client-side search and filtering
   const processedCostumes = useMemo(() => {
-    if (!allCostumes?.length) return []
+    if (!costumes || costumes.length === 0) return []
 
-    return allCostumes
-      .filter((costume: CostumeItem) => applyClientFilters(costume, filters))
-      .sort((a: CostumeItem, b: CostumeItem) => applySorting(a, b, filters.sort))
-  }, [allCostumes, filters, applyClientFilters, applySorting])
+    let result = [...costumes]
+
+    // Apply search filter if search was submitted and has value
+    if (isSearchSubmitted && searchQuery.trim()) {
+      const searchTerm = searchQuery.toLowerCase().trim()
+      result = result.filter(costume => {
+        const searchableContent = [
+          costume.name || '',
+          costume.brand || '',
+          costume.category || '',
+          ...(costume.tags || [])
+        ].join(' ').toLowerCase()
+        return searchableContent.includes(searchTerm)
+      })
+    }
+
+    // Apply other filters
+    const filterValues = { ...filters, search: searchQuery }
+    result = result.filter(costume => applyClientFilters(costume, filterValues))
+
+    // Apply sorting
+    return result.sort((a, b) => applySorting(a, b, filters.sort || 'newest'))
+  }, [costumes, filters, searchQuery, isSearchSubmitted, applyClientFilters, applySorting])
 
   // Event handlers
   const handleCategorySelect = useCallback((category: string) => {
@@ -259,19 +292,23 @@ const MarketPlaceSection = () => {
     setCurrentPage(1)
   }, [form])
 
+  const handleSearch = useCallback(() => {
+    setSearchQuery(filters.search || '')
+    setIsSearchSubmitted(true)
+    setCurrentPage(1)
+  }, [filters.search])
+
   const handleAddToWishlist = useCallback((costumeId: string) => {
     if (!isAuthenticated) {
       router.push('/signin')
       return
     }
 
-    // Log current user info for debugging
+    console.log('Adding to wishlist:', costumeId)
     console.log('Current user:', user)
     console.log('Current role:', currentRole)
-    console.log('Adding to wishlist:', costumeId)
 
     // TODO: Implement wishlist API integration
-    // You can now use user.id, currentRole, etc.
   }, [isAuthenticated, router, user, currentRole])
 
   const handlePageChange = useCallback((page: number) => {
@@ -283,7 +320,7 @@ const MarketPlaceSection = () => {
     setIsFilterOpen(prev => !prev)
   }, [])
 
-  // Loading state - include auth loading
+  // Loading state
   if (authLoading || isLoadingCostumes || isLoadingCategories) {
     return (
       <div className="container mx-auto py-20 flex justify-center items-center">
@@ -305,6 +342,29 @@ const MarketPlaceSection = () => {
           </p>
           <Button onClick={() => refetch()} variant="outline">
             Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // No data state
+  if (isSuccess && (!costumes || costumes.length === 0)) {
+    return (
+      <div className="container mx-auto py-20 flex justify-center items-center">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-2">No costumes found</h3>
+          <p className="text-muted-foreground mb-4">
+            Try adjusting your filters or search terms
+          </p>
+          <Button
+            onClick={() => {
+              form.reset()
+              setCurrentPage(1)
+            }}
+            variant="outline"
+          >
+            Clear Filters
           </Button>
         </div>
       </div>
@@ -337,9 +397,9 @@ const MarketPlaceSection = () => {
           </div>
 
           <SearchBar
-            search={filters.search}
+            search={filters.search || ''}
             form={form}
-            onFilter={toggleFilterSidebar}
+            onFilter={handleSearch}
           />
         </header>
 
@@ -376,12 +436,12 @@ const MarketPlaceSection = () => {
             </span>{' '}
             of{' '}
             <span className="font-medium text-foreground">
-              {pagination?.totalItems || 0}
+              {pagination?.total_count || 0}
             </span>{' '}
             results
-            {pagination && pagination.totalPages > 1 && (
+            {pagination && pagination.total_pages > 1 && (
               <span className="ml-2">
-                • Page {pagination.currentPage} of {pagination.totalPages}
+                • Page {pagination.page} of {pagination.total_pages}
               </span>
             )}
           </div>
@@ -399,7 +459,7 @@ const MarketPlaceSection = () => {
           />
 
           {/* Pagination */}
-          {pagination && pagination.totalPages > 1 && (
+          {pagination && pagination.total_pages > 1 && (
             <div className="mt-8">
               <MarketplacePagination
                 pagination={pagination}

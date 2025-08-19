@@ -9,7 +9,7 @@ import { useSwitchRole } from '@/lib/api/authApi';
 import { useSendMessageInquire } from '@/lib/api/messageApi';
 
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth';
-import { CostumeItem } from '@/lib/types/marketplaceType';
+import { CostumeByName } from '@/lib/types/marketplace/get-costume';
 import { cn } from '@/lib/utils';
 import {
     Heart,

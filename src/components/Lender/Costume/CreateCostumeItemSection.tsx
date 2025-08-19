@@ -8,77 +8,23 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { CostumeSchema, type CostumeValues } from '@/lib/zodSchema/costumeSchema';
 
-// Type definitions to match your backend expectations
-type MainImagesType = {
-    front: File | null;
-    back: File | null;
-};
-
-type AdditionalImageType = {
-    id: string;
-    file: File;
-    preview: string;
-};
+import { costumeFormSchema, CostumeFormValues } from '@/lib/zodSchema/costumeSchema';
+import { AdditionalImageType, MainImagesType } from '@/lib/types/costume';
+import { uploadImage } from '@/utils/supabase/fileUpload';
+import { RentPriceDetailsCard, SalePriceDetailsCard } from './UiProductsSections/PriceDetailsCard';
+import { createCostumeApi } from '@/lib/api/costumeApi';
 
 // Lazy load components
-const ProductImagesUpload = lazy(() => import('@/components/Lender/Costume/ProductImageUploadFormSection'));
-/* const ProductInformationFormSection = lazy(() => import('@/components/Lender/Costume/CostumeInfoSection')); */
-const ProductPreview = lazy(() => import('@/components/Lender/Costume/CostumeReview'));
-
-// API function - replace with your actual API endpoint
-const createCostumeApi = async (data: CostumeValues): Promise<{ message: string }> => {
-    const response = await fetch('/api/costumes', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create costume');
-    }
-
-    return response.json();
-};
-
-// Image upload function - replace with your actual upload logic
-const uploadImage = async ({ file }: { file: File }): Promise<{ url?: string; error?: string }> => {
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            throw new Error('Upload failed');
-        }
-
-        const result = await response.json();
-        return { url: result.url };
-    } catch (error) {
-        return { error: error instanceof Error ? error.message : 'Upload failed' };
-    }
-};
-
-// Query keys - replace with your actual query keys
-const costumeKeys = {
-    all: ['costumes'] as const,
-    byLender: (lenderId: string) => ['costumes', 'lender', lenderId] as const,
-    byLenderPaginated: (lenderId: string, params: { page: number; limit: number }) =>
-        ['costumes', 'lender', lenderId, 'paginated', params] as const,
-};
+const ProductImagesUpload = lazy(() => import('./UiProductsSections/ProductImageUploadFormSection'));
+const ProductInformationFormSection = lazy(() => import('./UiProductsSections/ProductInformationFormSection'));
+const ProductPreview = lazy(() => import('./UiProductsSections/ProductReview'));
 
 // Main Component
 const CreateCostumeItemSection: React.FC = () => {
@@ -95,12 +41,17 @@ const CreateCostumeItemSection: React.FC = () => {
     }, [isAuthenticated, authLoading, router]);
 
     // Loading states
-    const [isUploading, setIsUploading] = useState<boolean>(false);
-    const [isCreating, setIsCreating] = useState<boolean>(false);
-    const [createError, setCreateError] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
 
     // Combined loading state
     const isLoading = isUploading || isCreating || authLoading;
+
+    useEffect(() => {
+        const queryKey = ['products', 'list', userRolesData?.user_id];
+        const cached = queryClient.getQueryData(queryKey);
+        console.log('Cached data:', cached);
+    }, [queryClient, userRolesData?.user_id]);
 
     // Custom validation state for images
     const [imageErrors, setImageErrors] = useState<{
@@ -109,39 +60,25 @@ const CreateCostumeItemSection: React.FC = () => {
         additionalImages?: string;
     }>({});
 
-    // Form setup with zod validation
-    const form = useForm<CostumeValues>({
-        resolver: zodResolver(CostumeSchema),
+    // Form setup with zod validation - FIXED: Using proper CostumeFormValues type
+    const form = useForm<CostumeFormValues>({
+        resolver: zodResolver(costumeFormSchema),
         defaultValues: {
             name: '',
             brand: '',
             gender: 'unisex',
             description: '',
-            discount: '0',
+            discount: '',
+            price: '',
             tags: [],
             category: '',
+            addOns: [],
             sizes: '',
             listingType: 'rent',
-            selectedCostumeType: '',
-            security_deposit: '0',
-            extended_days: '0',
-            sale_price: '0',
-            mainImages: {
-                front: '',
-                back: ''
-            },
-            additionalImages: [],
-            addOns: [],
-            costumeType: [],
-            mainOffer: {
-                type: '',
-                price: '0'
-            },
-            lenderUser: {
-                uid: '',
-                email: '',
-                username: ''
-            }
+            security_deposit: '',
+            extended_days: '',
+            sale_price: '',
+            costumeType: 'costume_only'
         }
     });
 
@@ -154,7 +91,8 @@ const CreateCostumeItemSection: React.FC = () => {
     } = form;
 
     // Watch form values
-    const tags = watch('tags');
+    const tags = watch('tags') || [];
+
     const listingType = watch('listingType');
 
     // Image states
@@ -167,16 +105,14 @@ const CreateCostumeItemSection: React.FC = () => {
 
     // Handler for Adding Tags
     const handleAddTag = useCallback((tag: string) => {
-        const currentTags = tags || [];
-        if (!currentTags.includes(tag)) {
-            setValue('tags', [...currentTags, tag], { shouldValidate: true });
+        if (!tags.includes(tag)) {
+            setValue('tags', [...tags, tag], { shouldValidate: true });
         }
     }, [tags, setValue]);
 
     // Handler for Removing Tags
     const handleRemoveTag = useCallback((tagToRemove: string) => {
-        const currentTags = tags || [];
-        setValue('tags', currentTags.filter((tag: string) => tag !== tagToRemove), { shouldValidate: true });
+        setValue('tags', tags.filter((tag: string) => tag !== tagToRemove), { shouldValidate: true });
     }, [tags, setValue]);
 
     // Handlers
@@ -223,9 +159,7 @@ const CreateCostumeItemSection: React.FC = () => {
         setAdditionalImages(prev => {
             const items = Array.from(prev);
             const [reorderedItem] = items.splice(result.source.index, 1);
-            if (result.destination) {
-                items.splice(result.destination.index, 0, reorderedItem as AdditionalImageType);
-            }
+            items.splice(result.destination!.index, 0, reorderedItem as any);
             return items;
         });
     }, []);
@@ -248,15 +182,11 @@ const CreateCostumeItemSection: React.FC = () => {
         return isValid;
     };
 
-    const prepareData = async (data: CostumeValues): Promise<CostumeValues> => {
+    const prepareData = async (data: CostumeFormValues) => {
         try {
             // Upload main images
-            if (!mainImages.front || !mainImages.back) {
-                throw new Error('Front and back images are required');
-            }
-
-            const frontImageUpload = await uploadImage({ file: mainImages.front });
-            const backImageUpload = await uploadImage({ file: mainImages.back });
+            const frontImageUpload = await uploadImage({ file: mainImages.front as File });
+            const backImageUpload = await uploadImage({ file: mainImages.back as File });
 
             if (!frontImageUpload.url || !backImageUpload.url) {
                 const frontError = frontImageUpload.error || 'Failed to upload front image';
@@ -271,7 +201,7 @@ const CreateCostumeItemSection: React.FC = () => {
                 }
             }
 
-            // Upload additional images
+            // Upload additional images and track their order
             const additionalImageUploads = await Promise.all(
                 additionalImages.map(async (img, index) => {
                     const upload = await uploadImage({ file: img.file });
@@ -282,51 +212,78 @@ const CreateCostumeItemSection: React.FC = () => {
                     }
                     return {
                         url: upload.url,
-                        order: index
+                        order: index + 1
                     };
                 })
             );
 
-            // Upload add-on images
-            const addOnsWithImages = await Promise.all(
-                (data.addOns || []).map(async (addon, index) => {
-                    if (addon.image && typeof addon.image !== 'string') {
-                        // If image is a File object, upload it
-                        const upload = await uploadImage({ file: addon.image as any });
-                        if (!upload.url) {
-                            const errorMessage = upload.error || `Failed to upload add-on image ${index + 1}`;
-                            console.error(`Upload failed for add-on image ${index + 1}:`, errorMessage);
-                            throw new Error(errorMessage);
+            // Upload add-on images only if listingType allows add-ons (sale or both)
+            let addOnsWithImages: any[] = [];
+            if (data.listingType === 'sale' || data.listingType === 'both') {
+                addOnsWithImages = await Promise.all(
+                    (data.addOns || []).map(async (addon, index) => {
+                        if (addon.image) {
+                            const upload = await uploadImage({ file: addon.image as File });
+                            if (!upload.url) {
+                                const errorMessage = upload.error || `Failed to upload add-on image ${index + 1}`;
+                                console.error(`Upload failed for add-on image ${index + 1}:`, errorMessage);
+                                throw new Error(errorMessage);
+                            }
+                            return {
+                                ...addon,
+                                image: upload.url
+                            };
                         }
                         return {
                             ...addon,
-                            image: upload.url
+                            image: null
                         };
-                    }
-                    return addon;
-                })
-            );
+                    })
+                );
+            }
 
-            // Prepare the final data object that matches your backend schema
-            const preparedData: CostumeValues = {
-                ...data,
+
+
+            // Prepare the final data object based on listingType
+            let preparedData: any = {
                 mainImages: {
                     front: frontImageUpload.url,
                     back: backImageUpload.url
                 },
                 additionalImages: additionalImageUploads,
-                addOns: addOnsWithImages,
+                addOns: (data.listingType === 'sale' || data.listingType === 'both') ? addOnsWithImages : [],
+                sizes: data.sizes,
                 lenderUser: {
-                    uid: userRolesData?.user_id || '',
-                    email: userRolesData?.email || '',
-                    username: userRolesData?.personal_info?.username || ''
+                    uid: userRolesData?.user_id,
+                    email: userRolesData?.email,
+                    username: userRolesData?.personal_info?.username,
                 },
-                // Ensure numeric fields are properly formatted as strings
+                name: data.name,
+                brand: data.brand,
+                gender: data.gender,
+                costumeType: data.costumeType, // Add costumeType to the prepared data
+                description: data.description,
+                tags: data.tags,
+                category: data.category,
+                listingType: data.listingType,
+                price: data.price || '0',
                 discount: data.discount || '0',
-                sale_price: data.sale_price || '0',
-                security_deposit: data.security_deposit || '0',
-                extended_days: data.extended_days || '0'
             };
+
+            if (data.listingType === 'rent' || data.listingType === 'both') {
+                preparedData = {
+                    ...preparedData,
+                    security_deposit: data.security_deposit,
+                    extended_days: data.extended_days,
+                };
+            }
+
+            if (data.listingType === 'sale' || data.listingType === 'both') {
+                preparedData = {
+                    ...preparedData,
+                    sale_price: data.sale_price,
+                };
+            }
 
             return preparedData;
         } catch (error) {
@@ -335,8 +292,9 @@ const CreateCostumeItemSection: React.FC = () => {
         }
     };
 
-    const onSubmit = async (data: CostumeValues) => {
+    const onSubmit = async (data: CostumeFormValues) => {
         try {
+
             // Validate images first
             const imagesValid = validateImages();
             if (!imagesValid) {
@@ -346,27 +304,19 @@ const CreateCostumeItemSection: React.FC = () => {
 
             // Start upload process
             setIsUploading(true);
-            setCreateError(null);
 
             try {
                 // Prepare data with uploaded images
                 const preparedData = await prepareData(data);
                 console.log("preparedData", preparedData);
+                console.log("userRolesData", userRolesData);
 
-                // Submit to API
+                // Submit to API using the direct function
                 setIsCreating(true);
-                const result = await createCostumeApi(preparedData);
-
-                // Invalidate queries
-                const lenderId = preparedData.lenderUser.uid;
-                if (lenderId) {
-                    queryClient.invalidateQueries({ queryKey: costumeKeys.byLender(lenderId) });
-                    queryClient.invalidateQueries({ queryKey: costumeKeys.byLenderPaginated(lenderId, { page: 1, limit: 10 }) });
-                }
-                queryClient.invalidateQueries({ queryKey: costumeKeys.all });
-
-                toast.success(result.message || 'Costume created successfully!');
-                router.push('/lender/products/list');
+                await createCostumeApi(preparedData);
+                // Invalidate queries for this lender and all costumes
+                toast.success('Costume created successfully!');
+                /*     router.push('/lender/products/list'); */
             } finally {
                 setIsUploading(false);
                 setIsCreating(false);
@@ -388,10 +338,11 @@ const CreateCostumeItemSection: React.FC = () => {
                     errorMessage = error.message;
                 }
             }
-            setCreateError(errorMessage);
+
             toast.error(errorMessage);
         }
     };
+
 
     // Cleanup function for URL objects
     useEffect(() => {
@@ -430,13 +381,7 @@ const CreateCostumeItemSection: React.FC = () => {
                     <div className="flex flex-col space-y-2 mb-8">
                         <h1 className="text-3xl font-bold tracking-tight">Create New Costume</h1>
                         <p className="text-muted-foreground">
-                            Add your costume details and start earning by {
-                                listingType === 'rent'
-                                    ? 'renting it out'
-                                    : listingType === 'sale'
-                                        ? 'selling it'
-                                        : 'renting or selling it'
-                            }.
+                            Add your costume details and start earning by {listingType === 'rent' ? 'renting it out' : listingType === 'sale' ? 'selling it' : 'renting or selling it'}.
                         </p>
                     </div>
 
@@ -468,14 +413,14 @@ const CreateCostumeItemSection: React.FC = () => {
                             {/* Costume Information Form */}
                             <div className="space-y-6">
                                 <Suspense fallback={<div className="min-h-[300px] animate-pulse bg-slate-100 rounded-md"></div>}>
-                                    {/*                                     <ProductInformationFormSection
+                                    <ProductInformationFormSection
                                         handleAddTag={handleAddTag}
                                         handleRemoveTag={handleRemoveTag}
-                                    /> */}
+                                    />
                                 </Suspense>
 
                                 {/* Price Details Card (conditional by listingType) */}
-                                {/*  <Suspense fallback={<div className="min-h-[100px] animate-pulse bg-slate-100 rounded-md"></div>}>
+                                <Suspense fallback={<div className="min-h-[100px] animate-pulse bg-slate-100 rounded-md"></div>}>
                                     {listingType === 'rent' && <RentPriceDetailsCard />}
                                     {listingType === 'sale' && <SalePriceDetailsCard />}
                                     {listingType === 'both' && (
@@ -484,7 +429,7 @@ const CreateCostumeItemSection: React.FC = () => {
                                             <SalePriceDetailsCard />
                                         </div>
                                     )}
-                                </Suspense> */}
+                                </Suspense>
 
                                 {/* Show validation errors if any */}
                                 {Object.keys(errors).length > 0 && (
@@ -492,17 +437,9 @@ const CreateCostumeItemSection: React.FC = () => {
                                         <h3 className="text-red-800 font-medium mb-2">Please fix the following errors:</h3>
                                         <ul className="text-red-600 text-sm space-y-1">
                                             {Object.entries(errors).map(([key, error]) => (
-                                                <li key={key}>• {error?.message || 'Invalid field'}</li>
+                                                <li key={key}>• {error?.message}</li>
                                             ))}
                                         </ul>
-                                    </div>
-                                )}
-
-                                {/* Show create error if any */}
-                                {createError && (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                        <h3 className="text-red-800 font-medium mb-2">Error creating costume:</h3>
-                                        <p className="text-red-600 text-sm">{createError}</p>
                                     </div>
                                 )}
 
@@ -526,7 +463,7 @@ const CreateCostumeItemSection: React.FC = () => {
                                         {isLoading ? (
                                             <>
                                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                {isUploading ? 'Uploading...' : 'Creating...'}
+                                                Creating...
                                             </>
                                         ) : (
                                             'Create Costume'

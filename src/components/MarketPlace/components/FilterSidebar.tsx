@@ -1,67 +1,62 @@
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Slider } from '@/components/ui/slider'
-import React, { useMemo } from 'react'
-import { FilterSidebarProps, FilterState } from '../types'
+"use client"
 
-import { useFetchAllCategories } from '@/lib/api/categoryApi'
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Slider } from "@/components/ui/slider"
+import React, { useMemo } from "react"
+import type { FilterSidebarProps, FilterState } from "../types"
 
-import { X } from 'lucide-react'
-import { useGetAllTags } from '@/lib/api/tagsApi'
+import { useFetchAllCategories } from "@/lib/api/categoryApi"
 
-
+import { X } from "lucide-react"
+import { useGetAllTags } from "@/lib/api/tagsApi"
 
 interface SelectableTag {
-  value: string;
-  label: string;
+  value: string
+  label: string
 }
 
 const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSidebarProps) => {
   // Handler for price range changes
   const handlePriceChange = (value: number[]) => {
-    form.setValue('priceRange', [value[0], value[1]] as [number, number])
+    form.setValue("priceRange", [value[0], value[1]] as [number, number])
   }
 
   // Handler for category changes
   const handleCategoryChange = (category: string) => {
-    form.setValue('category', category as any)
+    form.setValue("category", category as any)
   }
 
   // Handler for tag selection
   const handleTagChange = (tag: string, checked: boolean) => {
-    const currentTags = form.getValues('tags') || []
-    form.setValue(
-      'tags',
-      checked
-        ? [...currentTags, tag]
-        : currentTags.filter((t: string) => t !== tag)
-    )
+    const currentTags = form.getValues("tags") || []
+    form.setValue("tags", checked ? [...currentTags, tag] : currentTags.filter((t: string) => t !== tag))
   }
 
   // Handler for gender selection
   const handleGenderChange = (gender: string) => {
-    form.setValue('gender', gender)
+    form.setValue("gender", gender)
   }
 
   // Handler for sort selection
-  const handleSortChange = (sort: 'newest' | 'price-low' | 'price-high' | 'popular') => {
-    form.setValue('sort', sort)
+  const handleSortChange = (sort: "newest" | "price-low" | "price-high" | "popular") => {
+    form.setValue("sort", sort)
   }
 
   // Reset all filters
   const resetFilters = () => {
     form.reset({
-      search: '',
-      category: '',
+      search: "",
+      category: "",
       priceRange: minMaxPrice,
       tags: [],
-      gender: '',
-      sort: 'newest'
+      gender: "",
+      sort: "newest",
     })
   }
 
@@ -69,36 +64,36 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
   const { data: categoriesData, isLoading: isCategoriesLoading } = useFetchAllCategories({
     page: 1,
     limit: 100,
-  });
+  })
 
   // Fetch tags from API
   const { tags: availableTags, isLoading: isTagsLoading } = useGetAllTags({
     page: 1,
     limit: 100,
-  });
+  })
 
   // Memoize categories to prevent unnecessary re-renders
   const categories = useMemo(() => {
-    if (!categoriesData?.data?.categories) return [];
-    return categoriesData.data.categories.map(category => ({
+    if (!categoriesData?.data?.categories) return []
+    return categoriesData.data.categories.map((category) => ({
       value: category.categoryName,
-      label: category.categoryName
-    }));
-  }, [categoriesData]);
+      label: category.categoryName,
+    }))
+  }, [categoriesData])
 
   // Memoize tags to prevent unnecessary re-renders
   const tags = useMemo<SelectableTag[]>(() => {
-    if (!availableTags) return [];
-    return availableTags.map(tag => ({
+    if (!availableTags) return []
+    return availableTags.map((tag) => ({
       value: tag.tagName,
-      label: tag.tagName
-    }));
-  }, [availableTags]);
+      label: tag.tagName,
+    }))
+  }, [availableTags])
 
   // Get popular tags (first 15)
   const popularTags = useMemo<SelectableTag[]>(() => {
-    return tags.slice(0, 15);
-  }, [tags]);
+    return tags.slice(0, 15)
+  }, [tags])
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -131,7 +126,7 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
                   <Input
                     type="number"
                     value={filters.priceRange[0]}
-                    onChange={(e) => handlePriceChange([parseInt(e.target.value), filters.priceRange[1]])}
+                    onChange={(e) => handlePriceChange([Number.parseInt(e.target.value), filters.priceRange[1]])}
                     className="h-9"
                     placeholder="Min"
                   />
@@ -139,7 +134,7 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
                   <Input
                     type="number"
                     value={filters.priceRange[1]}
-                    onChange={(e) => handlePriceChange([filters.priceRange[0], parseInt(e.target.value)])}
+                    onChange={(e) => handlePriceChange([filters.priceRange[0], Number.parseInt(e.target.value)])}
                     className="h-9"
                     placeholder="Max"
                   />
@@ -150,11 +145,7 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
             {/* Category Filter */}
             <div>
               <h3 className="font-medium mb-3">Category</h3>
-              <RadioGroup
-                value={filters.category}
-                onValueChange={handleCategoryChange}
-                className="space-y-1"
-              >
+              <RadioGroup value={filters.category} onValueChange={handleCategoryChange} className="space-y-1">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="" id="category-all" />
                   <Label htmlFor="category-all">All Categories</Label>
@@ -177,11 +168,7 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
             {/* Gender Filter */}
             <div>
               <h3 className="font-medium mb-3">Gender</h3>
-              <RadioGroup
-                value={filters.gender}
-                onValueChange={handleGenderChange}
-                className="space-y-1"
-              >
+              <RadioGroup value={filters.gender} onValueChange={handleGenderChange} className="space-y-1">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="" id="gender-all" />
                   <Label htmlFor="gender-all">All</Label>
@@ -205,27 +192,25 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
             <div>
               <h3 className="font-medium mb-3">Sizes</h3>
               <div className="flex flex-wrap gap-2">
-                {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => {
-                  const selectedSizes = Array.isArray(filters.sizes) ? filters.sizes : [];
+                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => {
+                  const selectedSizes = Array.isArray(filters.sizes) ? filters.sizes : []
                   return (
                     <Button
                       key={size}
                       variant={selectedSizes.includes(size) ? "default" : "outline"}
                       size="sm"
                       onClick={() => {
-                        const checked = !selectedSizes.includes(size);
+                        const checked = !selectedSizes.includes(size)
                         form.setValue(
-                          'sizes',
-                          checked
-                            ? [...selectedSizes, size]
-                            : selectedSizes.filter((s: string) => s !== size)
-                        );
+                          "sizes",
+                          checked ? [...selectedSizes, size] : selectedSizes.filter((s: string) => s !== size),
+                        )
                       }}
                       className="rounded-full text-xs h-7"
                     >
                       {size}
                     </Button>
-                  );
+                  )
                 })}
               </div>
             </div>
@@ -270,7 +255,9 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
                         checked={filters.tags.includes(tag.value)}
                         onCheckedChange={(checked) => handleTagChange(tag.value, checked as boolean)}
                       />
-                      <Label htmlFor={`tag-${tag.value}`} className="text-sm">{tag.label}</Label>
+                      <Label htmlFor={`tag-${tag.value}`} className="text-sm">
+                        {tag.label}
+                      </Label>
                     </div>
                   ))
                 )}
@@ -282,7 +269,7 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
               <h3 className="font-medium mb-3">Sort By</h3>
               <RadioGroup
                 value={filters.sort}
-                onValueChange={(value) => handleSortChange(value as FilterState['sort'])}
+                onValueChange={(value) => handleSortChange(value as FilterState["sort"])}
                 className="space-y-1"
               >
                 <div className="flex items-center space-x-2">
@@ -301,11 +288,7 @@ const FilterSidebar = ({ filters, form, minMaxPrice, isOpen, onClose }: FilterSi
             </div>
 
             {/* Reset Button */}
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={resetFilters}
-            >
+            <Button variant="outline" className="w-full bg-transparent" onClick={resetFilters}>
               Reset Filters
             </Button>
           </div>

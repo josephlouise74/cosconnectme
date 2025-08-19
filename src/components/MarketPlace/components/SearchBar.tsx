@@ -1,75 +1,122 @@
-import React from 'react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Search, SlidersHorizontal } from 'lucide-react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Form, FormControl, FormField, FormItem } from '@/components/ui/form'
-import { SearchBarProps } from '../types'
+"use client"
 
-// Define the search form schema with Zod
-const searchFormSchema = z.object({
-  searchQuery: z.string()
-})
+import type React from "react"
+import { useCallback, useMemo, useEffect } from "react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Search, SlidersHorizontal, X } from "lucide-react"
+import type { UseFormReturn } from "react-hook-form"
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form"
+import { useDebounce } from "@/lib/hooks/useDebounce"
 
-// Infer the type from the schema
-type SearchFormValues = z.infer<typeof searchFormSchema>
+interface SearchBarProps {
+  search: string
+  form: UseFormReturn<any> // External form from marketplace section
+  onFilter: () => void
+  placeholder?: string
+  showFilterButton?: boolean
+  isLoading?: boolean
+}
 
-const SearchBar = ({ search, onFilter, form: parentForm }: SearchBarProps) => {
-  // Initialize React Hook Form with Zod validation
-  const form = useForm<SearchFormValues>({
-    resolver: zodResolver(searchFormSchema),
-    defaultValues: {
-      searchQuery: search
+const SearchBar = ({
+  search,
+  form,
+  onFilter,
+  placeholder = "Search costumes by name, brand, category, or tags...",
+  showFilterButton = true,
+  isLoading = false,
+}: SearchBarProps) => {
+  const currentSearchValue = form.watch("search") || ""
+
+  // Update local form value when search prop changes
+  useEffect(() => {
+    if (search !== currentSearchValue) {
+      form.setValue("search", search)
     }
-  })
+  }, [search, currentSearchValue, form])
 
-  // Handle form submission
-  const onSubmit = (data: SearchFormValues) => {
-    parentForm.setValue('search', data.searchQuery)
+  const onSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault()
+    // Trigger search only when form is submitted
+    onFilter()
+  }, [onFilter])
 
-  }
+  const handleClearSearch = useCallback(() => {
+    form.setValue("search", "")
+  }, [form])
+
+  const hasSearchValue = useMemo(() => currentSearchValue.length > 0, [currentSearchValue])
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex w-full gap-2">
+      <form onSubmit={onSubmit} className="flex w-full gap-2">
         <FormField
           control={form.control}
-          name="searchQuery"
+          name="search"
           render={({ field }) => (
             <FormItem className="flex-1 m-0 w-full">
               <FormControl>
                 <div className="relative w-full flex items-center">
-                  <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
-                    placeholder="Search for cosplay items..."
-                    className="pl-9 pr-4 flex-1"
+                    placeholder={placeholder}
+                    className="pl-9 pr-10 flex-1 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                    disabled={isLoading}
                     {...field}
                     onChange={(e) => {
                       field.onChange(e)
-                      if (e.target.value === '') {
-                        parentForm.setValue('search', '')
-                      }
                     }}
                   />
+                  {hasSearchValue && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-2 h-6 w-6 p-0 hover:bg-muted rounded-full"
+                      onClick={handleClearSearch}
+                      disabled={isLoading}
+                    >
+                      <X className="h-3 w-3" />
+                      <span className="sr-only">Clear search</span>
+                    </Button>
+                  )}
                 </div>
               </FormControl>
             </FormItem>
           )}
         />
-        <Button type="submit">
-          Search
+
+        <Button type="submit" disabled={isLoading} className="min-w-[80px] transition-all duration-200">
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <span className="hidden sm:inline">Searching...</span>
+            </div>
+          ) : (
+            <>
+              <Search className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Search</span>
+            </>
+          )}
         </Button>
-        <Button type="button" variant="outline" size="icon" onClick={onFilter} className="md:hidden">
-          <SlidersHorizontal className="h-4 w-4" />
-        </Button>
+
+        {showFilterButton && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={onFilter}
+            className="md:hidden transition-all duration-200 hover:bg-muted bg-transparent"
+            disabled={isLoading}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span className="sr-only">Open filters</span>
+          </Button>
+        )}
       </form>
     </Form>
   )
 }
 
 export default SearchBar
-
-

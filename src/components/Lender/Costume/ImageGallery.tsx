@@ -4,14 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CostumeItem } from '@/types/costumes/marketplaceTypeV2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import React, { useMemo, useState, useCallback } from 'react';
 import Image from 'next/image';
 
 interface ImageGalleryProps {
-    costume: CostumeItem;
+    costume: any;
 }
 
 interface ImageState {

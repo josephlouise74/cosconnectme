@@ -1,170 +1,145 @@
 "use client"
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { CostumeItem } from '@/lib/types/marketplaceType';
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import type { MarketplaceCostume } from "@/lib/types/marketplaceType"
 
-import { Clock, Heart, ShoppingCart, User } from 'lucide-react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import React, { useCallback, useMemo, useState } from 'react';
+import { Clock, Eye, Heart, Shield, ShoppingCart, Star, User } from "lucide-react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import type React from "react"
+import { useCallback, useMemo, useState } from "react"
 
 interface CostumeCardProps {
-  costume: CostumeItem;
-  onAddToWishlist: (costumeId: string) => void;
+  costume: MarketplaceCostume
+  onAddToWishlist: (costumeId: string) => void
 }
 
 const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount);
-};
+  }).format(amount)
+}
 
 const slugify = (text: string): string =>
-  text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 
-const getRentPrice = (costume: CostumeItem) => {
-  if (costume.rent?.main_rent_offer?.price) {
+const getRentPrice = (costume: MarketplaceCostume) => {
+  if (costume.pricing?.rental?.price) {
     return {
-      price: parseFloat(costume.rent.main_rent_offer.price),
-      type: costume.rent.main_rent_offer.type || 'day',
-    };
+      price: Number.parseFloat(costume.pricing.rental.price),
+      type: "day", // Default to day since type isn't specified in the new structure
+      securityDeposit: costume.pricing.rental.security_deposit
+        ? Number.parseFloat(costume.pricing.rental.security_deposit)
+        : 0,
+    }
   }
-  return null;
-};
+  return null
+}
 
-const getSalePrice = (costume: CostumeItem) => {
-  if (costume.sale?.price) {
-    const original = parseFloat(costume.sale.price);
-    const discount = costume.sale.discount || 0;
-    const discounted = original - (original * (discount / 100));
-    return { original, discounted, discount };
+const getSalePrice = (costume: MarketplaceCostume) => {
+  if (costume.pricing?.sale?.price) {
+    const price = Number.parseFloat(costume.pricing.sale.price)
+    return {
+      original: price,
+      discounted: price, // No discount field in new structure
+      discount: 0,
+    }
   }
-  return null;
-};
+  return null
+}
 
 const getListingLabel = (type: string) => {
-  if (type === 'both') return 'For Rent & Sale';
-  if (type === 'rent') return 'For Rent';
-  if (type === 'sale') return 'For Sale';
-  return '';
-};
+  if (type === "rent") return "For Rent"
+  if (type === "sell") return "For Sale"
+  return ""
+}
 
 const getListingColor = (type: string) => {
-  if (type === 'both') return 'bg-rose-500 text-white';
-  if (type === 'rent') return 'bg-blue-500 text-white';
-  if (type === 'sale') return 'bg-pink-500 text-white';
-  return '';
-};
+  if (type === "rent") return "bg-blue-500 text-white"
+  if (type === "sell") return "bg-pink-500 text-white"
+  return ""
+}
 
 const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) => {
-  const router = useRouter();
-  const [isHovered, setIsHovered] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  const router = useRouter()
+  const [isHovered, setIsHovered] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
-  const rent = getRentPrice(costume);
-  const sale = getSalePrice(costume);
-  const isAvailable = costume.is_available && costume.status === 'active';
+  const rent = getRentPrice(costume)
+  const sale = getSalePrice(costume)
+  const isAvailable = true // Assuming all costumes in marketplace are available
 
   const displayImage = useMemo(() => {
-    if (imageError) return '/placeholder-costume.jpg';
-    if (isHovered && costume.main_images.back) return costume.main_images.back;
-    return costume.main_images.front || '/placeholder-costume.jpg';
-  }, [isHovered, costume.main_images, imageError]);
+    if (imageError) return "/placeholder-costume.jpg"
+    if (isHovered && costume.main_images.back) return costume.main_images.back
+    return costume.main_images.front || "/placeholder-costume.jpg"
+  }, [isHovered, costume.main_images, imageError])
 
   const handleCardClick = useCallback(() => {
-    const query = new URLSearchParams({
-      product: `${costume.name}_${costume.brand}`,
-      type: costume.listing_type,
-      id: costume.id,
-    });
-    const slugifiedName = slugify(costume.name);
-    router.push(`/marketplace/${slugifiedName}?${query.toString()}`);
-  }, [costume, router]);
+
+    // Format: /marketplace/[costume_id]/[costume_name]
+    router.push(`/marketplace/${costume.id}`)
+  }, [costume, router])
 
   const handleAddToWishlist = useCallback(
     (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onAddToWishlist(costume.id);
+      e.stopPropagation()
+      onAddToWishlist(costume.id)
     },
-    [costume.id, onAddToWishlist]
-  );
+    [costume.id, onAddToWishlist],
+  )
 
-  // Action buttons for rent/sale
   const renderActions = () => {
     if (!isAvailable) {
       return (
         <Button className="w-full" size="sm" disabled>
           Unavailable
         </Button>
-      );
+      )
     }
-    if (costume.listing_type === 'both') {
-      return (
-        <div className="flex gap-2">
-          {rent && (
-            <Button
-              className="flex-1 font-semibold border-2 border-blue-500 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-              size="sm"
-              onClick={e => {
-                e.stopPropagation();
-                handleCardClick();
-              }}
-            >
-              <Clock className="h-4 w-4 mr-1" /> Rent
-            </Button>
-          )}
-          {sale && (
-            <Button
-              className="flex-1 font-semibold border-2 border-pink-500 hover:bg-pink-50 hover:text-pink-700 transition-colors"
-              size="sm"
-              variant="secondary"
-              onClick={e => {
-                e.stopPropagation();
-                handleCardClick();
-              }}
-            >
-              <ShoppingCart className="h-4 w-4 mr-1" /> Buy
-            </Button>
-          )}
-        </div>
-      );
-    }
-    if (costume.listing_type === 'rent' && rent) {
+
+    if (costume.listing_type === "rent" && rent) {
       return (
         <Button
           className="w-full font-semibold border-2 border-blue-500 hover:bg-blue-50 hover:text-blue-700 transition-colors"
           size="sm"
-          onClick={e => {
-            e.stopPropagation();
-            handleCardClick();
+          onClick={(e) => {
+            e.stopPropagation()
+            handleCardClick()
           }}
         >
           <Clock className="h-4 w-4 mr-1" /> Rent Now
         </Button>
-      );
+      )
     }
-    if (costume.listing_type === 'sale' && sale) {
+
+    if (costume.listing_type === "sell" && sale) {
       return (
         <Button
           className="w-full font-semibold border-2 border-pink-500 hover:bg-pink-50 hover:text-pink-700 transition-colors"
           size="sm"
-          onClick={e => {
-            e.stopPropagation();
-            handleCardClick();
+          onClick={(e) => {
+            e.stopPropagation()
+            handleCardClick()
           }}
         >
           <ShoppingCart className="h-4 w-4 mr-1" /> Buy Now
         </Button>
-      );
+      )
     }
-    return null;
-  };
+
+    return null
+  }
 
   return (
     <TooltipProvider>
@@ -175,13 +150,16 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) =
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Listing Type Indicator */}
-        <div className={`absolute top-3 left-3 z-20 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${getListingColor(costume.listing_type)}`}>
+        <div
+          className={`absolute top-3 left-3 z-20 px-3 py-1 rounded-full text-xs font-semibold shadow-md ${getListingColor(costume.listing_type)}`}
+        >
           {getListingLabel(costume.listing_type)}
         </div>
+
         {/* Image Section */}
         <div className="relative aspect-[3/4] w-full bg-gray-100 overflow-hidden">
           <Image
-            src={displayImage}
+            src={displayImage || "/placeholder.svg"}
             alt={`${costume.name} by ${costume.brand}`}
             fill
             className="object-cover transition-all duration-500 group-hover:scale-105"
@@ -189,6 +167,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) =
             onError={() => setImageError(true)}
             priority={false}
           />
+
           {/* Wishlist */}
           <Button
             variant="ghost"
@@ -200,12 +179,16 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) =
           >
             <Heart className="h-5 w-5 text-rose-500" />
           </Button>
+
           {/* Unavailable Overlay */}
           {!isAvailable && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
-              <Badge variant="destructive" className="text-base px-4 py-2">Unavailable</Badge>
+              <Badge variant="destructive" className="text-base px-4 py-2">
+                Unavailable
+              </Badge>
             </div>
           )}
+
           {/* Listing type badge (for accessibility, visually hidden) */}
           <span className="sr-only">{getListingLabel(costume.listing_type)}</span>
         </div>
@@ -213,50 +196,46 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) =
         {/* Info Section */}
         <CardContent className="flex flex-col flex-1 justify-between p-4 gap-3">
           <div className="space-y-1">
-            <h3 className="font-semibold text-base truncate leading-tight" title={costume.name}>{costume.name}</h3>
-            <p className="text-xs text-muted-foreground truncate" title={costume.brand}>by <span className="font-medium">{costume.brand}</span></p>
+            <h3 className="font-semibold text-base truncate leading-tight" title={costume.name}>
+              {costume.name}
+            </h3>
+            <p className="text-xs text-muted-foreground truncate" title={costume.brand}>
+              by <span className="font-medium">{costume.brand}</span>
+            </p>
           </div>
 
           {/* Price Section */}
-          <div className="flex flex-col gap-1">
-            {costume.listing_type === 'both' && (
-              <div className="flex flex-col gap-1">
-                {rent && (
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-blue-500 text-white px-2 py-0.5 text-xs font-semibold">Rent</Badge>
-                    <Clock className="h-4 w-4 text-blue-500" />
-                    <span className="font-semibold text-sm">{formatCurrency(rent.price)}</span>
-                    <span className="text-xs text-muted-foreground">/{rent.type}</span>
-                  </div>
+          <div className="flex flex-col gap-2">
+            {costume.listing_type === "rent" && rent && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-blue-500 text-white px-2 py-0.5 text-xs font-semibold">Rent</Badge>
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <span className="font-semibold text-sm">{formatCurrency(rent.price)}</span>
+                  <span className="text-xs text-muted-foreground">/{rent.type}</span>
+                </div>
+                {rent.securityDeposit > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                        <Shield className="h-3 w-3 text-amber-600" />
+                        <span className="text-xs font-medium text-amber-700">
+                          Security: {formatCurrency(rent.securityDeposit)}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Refundable security deposit required for rental</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
-                {sale && (
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-pink-500 text-white px-2 py-0.5 text-xs font-semibold">Sale</Badge>
-                    <ShoppingCart className="h-4 w-4 text-pink-500" />
-                    <span className="font-semibold text-sm">{formatCurrency(sale.discounted)}</span>
-                    {sale.discount > 0 && (
-                      <span className="text-xs text-muted-foreground line-through ml-1">{formatCurrency(sale.original)}</span>
-                    )}
-                  </div>
-                )}
-              </div>
+              </>
             )}
-            {costume.listing_type === 'rent' && rent && (
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-500 text-white px-2 py-0.5 text-xs font-semibold">Rent</Badge>
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span className="font-semibold text-sm">{formatCurrency(rent.price)}</span>
-                <span className="text-xs text-muted-foreground">/{rent.type}</span>
-              </div>
-            )}
-            {costume.listing_type === 'sale' && sale && (
+            {costume.listing_type === "sell" && sale && (
               <div className="flex items-center gap-2">
                 <Badge className="bg-pink-500 text-white px-2 py-0.5 text-xs font-semibold">Sale</Badge>
                 <ShoppingCart className="h-4 w-4 text-pink-500" />
                 <span className="font-semibold text-sm">{formatCurrency(sale.discounted)}</span>
-                {sale.discount > 0 && (
-                  <span className="text-xs text-muted-foreground line-through ml-1">{formatCurrency(sale.original)}</span>
-                )}
               </div>
             )}
           </div>
@@ -285,12 +264,23 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) =
             )}
           </div>
 
+          <div className="flex items-center justify-between text-xs text-muted-foreground bg-gray-50 rounded-md px-3 py-2">
+            <div className="flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              <span>{costume.view_count}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Star className="h-3 w-3" />
+              <span>{costume.favorite_count}</span>
+            </div>
+          </div>
+
           {/* Action Section */}
           <div className="mt-4">{renderActions()}</div>
         </CardContent>
       </Card>
     </TooltipProvider>
-  );
-};
+  )
+}
 
-export default CostumeCard;
+export default CostumeCard

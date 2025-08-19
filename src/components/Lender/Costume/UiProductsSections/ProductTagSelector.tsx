@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { useDebounce } from '@/hooks/useDebounce';
+import { useDebounce } from '@/lib/hooks/useDebounce';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Loader2, X } from 'lucide-react';

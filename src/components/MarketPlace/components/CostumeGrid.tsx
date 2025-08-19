@@ -1,10 +1,11 @@
 import { Button } from '@/components/ui/button'
-import { CostumeItem } from '@/lib/types/marketplaceType'
+
+import { MarketplaceCostume } from '@/lib/types/marketplaceType'
 import { SlidersHorizontal } from 'lucide-react'
 import CostumeCard from './CostumeCard'
 
 interface CostumeGridProps {
-  costumes: CostumeItem[]
+  costumes: MarketplaceCostume[]
   loading: boolean
   error: string | null
   onRetry: () => void
