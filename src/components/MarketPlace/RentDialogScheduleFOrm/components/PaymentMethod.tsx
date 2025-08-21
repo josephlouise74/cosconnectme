@@ -1,14 +1,15 @@
 "use client"
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { CheckCircle, Shield, Smartphone } from "lucide-react"
 import type React from "react"
 import { useFormContext } from "react-hook-form"
-import { Smartphone, Shield, CheckCircle } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { PartialRentalBookingFormData } from "./type"
 
 export const PaymentMethodForm: React.FC = () => {
-    const { control } = useFormContext()
+    const { control } = useFormContext<PartialRentalBookingFormData>()
 
     return (
         <div className="space-y-6">
@@ -37,17 +38,49 @@ export const PaymentMethodForm: React.FC = () => {
 
                     <FormField
                         control={control}
-                        name="paymentMethod.gcashNumber"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>GCash Mobile Number</FormLabel>
-                                <FormControl>
-                                    <Input type="tel" placeholder="+63 912 345 6789" {...field} className="text-lg" />
-                                </FormControl>
-                                <FormMessage />
-                                <p className="text-sm text-gray-500 mt-1">Enter the mobile number linked to your GCash account</p>
-                            </FormItem>
-                        )}
+                        name="payment_method.gcash_number"
+                        render={({ field }) => {
+                            const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                                let value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+
+                                // Ensure the number starts with 9 and is exactly 10 digits after +63
+                                if (value.startsWith('63')) {
+                                    value = value.substring(2);
+                                }
+                                if (value.length > 0 && value[0] !== '9') {
+                                    value = '9' + value.slice(0, 9); // Force start with 9 and limit to 10 digits
+                                } else if (value.length > 10) {
+                                    value = value.substring(0, 10); // Limit to 10 digits
+                                }
+
+                                field.onChange('+63' + value);
+                            };
+
+
+
+                            return (
+                                <FormItem>
+                                    <FormLabel>GCash Mobile Number</FormLabel>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <span className="text-gray-500 sm:text-sm">+63</span>
+                                        </div>
+                                        <Input
+                                            type="tel"
+                                            placeholder="912 345 6789"
+                                            className="pl-12 text-lg"
+                                            value={field.value ? field.value.replace('+63', '') : ''}
+                                            onChange={handleInputChange}
+                                            maxLength={12} // 9 digits + 3 spaces for formatting
+                                        />
+                                    </div>
+                                    <FormMessage />
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Enter your 10-digit GCash number starting with 9 (e.g., 912 345 6789)
+                                    </p>
+                                </FormItem>
+                            );
+                        }}
                     />
 
                     <div className="bg-gray-50 border rounded-lg p-4 space-y-3">

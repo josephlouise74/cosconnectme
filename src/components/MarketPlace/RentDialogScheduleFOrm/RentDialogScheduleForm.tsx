@@ -1,36 +1,35 @@
 "use client"
 
-import React, { useState, useCallback, useMemo } from "react"
-import { useForm, FormProvider, type SubmitHandler } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Check, ChevronLeft, ChevronRight, X, Package } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
+import { useCreateRequestRentalCostume } from "@/lib/api/rentalApi"
 import { cn } from "@/lib/utils"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Check, ChevronLeft, ChevronRight, Package, X } from "lucide-react"
+import { useParams } from "next/navigation"
+import React, { useCallback, useMemo, useState } from "react"
+import { FormProvider, useForm, type SubmitHandler } from "react-hook-form"
+import { PaymentMethodForm } from "./components/PaymentMethod"
+import { PersonalDetailsForm } from "./components/Personal-Info"
+import { RentSummary } from "./components/RentSummary"
+
+import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
+import { ScheduleForm } from "./components/ScheduleForm"
 import {
     BookingStep,
     BookingStepConfig,
     CostumeRentalInfo,
+    PartialRentalBookingFormData,
+    partialRentalBookingSchema,
     RentalBookingFormData,
     rentalBookingSchema
 } from "./components/type"
-import { ScheduleForm } from "./components/ScheduleForm"
-import { PersonalDetailsForm } from "./components/Personal-Info"
-import { PaymentMethodForm } from "./components/PaymentMethod"
-import { RentSummary } from "./components/RentSummary"
+
 
 // Constants
 const STEP_ORDER: readonly BookingStep[] = ["schedule", "personal", "payment", "summary"] as const
-
-const STEP_FIELD_MAP: Record<BookingStep, (keyof RentalBookingFormData)[]> = {
-    schedule: ["schedule"],
-    personal: ["personalDetails"],
-    payment: ["paymentMethod"],
-    summary: ["agreements"]
-}
 
 const STEP_CONFIG: Record<BookingStep, { title: string; description: string }> = {
     schedule: { title: "Schedule", description: "Select dates & delivery" },
@@ -40,29 +39,30 @@ const STEP_CONFIG: Record<BookingStep, { title: string; description: string }> =
 }
 
 // Default form values
-const getDefaultFormValues = (): RentalBookingFormData => ({
+const getDefaultFormValues = (costumeId: string = ""): PartialRentalBookingFormData => ({
+    costume_id: costumeId,
     schedule: {
-        startDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-        endDate: new Date(Date.now() + 48 * 60 * 60 * 1000), // Day after tomorrow
-        deliveryMethod: "delivery" as const,
-        deliveryAddress: "",
-        specialInstructions: ""
+        start_date: "",
+        end_date: "",
+        delivery_method: "delivery",
+        delivery_address: "",
+        special_instructions: ""
     },
-    personalDetails: {
-        firstName: "",
-        lastName: "",
+    personal_details: {
+        first_name: "",
+        last_name: "",
         email: "",
-        phoneNumber: "+63",
-        dateOfBirth: new Date(Date.now() - 19 * 365 * 24 * 60 * 60 * 1000) // 19 years ago
+        phone_number: "+63",
+        date_of_birth: ""
     },
-    paymentMethod: {
+    payment_method: {
         type: "gcash",
-        gcashNumber: ""
+        gcash_number: ""
     },
     agreements: {
-        termsAccepted: false,
-        damagePolicy: false,
-        cancellationPolicy: false
+        terms_accepted: false,
+        damage_policy: false,
+        cancellation_policy: false
     }
 })
 
@@ -118,14 +118,11 @@ const useStepManager = (initialStep: BookingStep = "schedule") => {
 
 // Custom hook for form submission
 const useFormSubmission = (
-    onBookingComplete?: (data: RentalBookingFormData) => void,
-    onClose?: () => void
+    onBookingComplete?: (data: RentalBookingFormData, response: any) => void,
 ) => {
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const { createRequestRentalCostume, isRequestRentalCostumeLoading } = useCreateRequestRentalCostume()
 
     const submitBooking = useCallback(async (data: RentalBookingFormData) => {
-        setIsSubmitting(true)
-
         try {
             console.log("Submitting booking data:", data)
 
@@ -133,30 +130,42 @@ const useFormSubmission = (
             const validatedData = rentalBookingSchema.parse(data)
             console.log("Schema validation passed:", validatedData)
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000))
+            // Call the API - this should return RentalRequestResponse
+            const response: any = await createRequestRentalCostume(validatedData)
+            console.log("API response:", response)
 
-            console.log("Booking submitted successfully")
-            onBookingComplete?.(validatedData)
-            onClose?.()
+            // Call the completion callback with both data and response
+            onBookingComplete?.(validatedData, response)
+
+            // Automatically redirect to checkout URL if available
+            if (response?.data?.payment?.checkout_url) {
+                console.log("Redirecting to checkout:", response.data.payment.checkout_url)
+                // Small delay to ensure state updates are processed
+                setTimeout(() => {
+                    window.location.href = response.data.payment.checkout_url
+                }, 100)
+            }
+
+            return response
 
         } catch (error) {
             console.error("Booking submission error:", error)
-            throw error // Re-throw to be handled by form
-        } finally {
-            setIsSubmitting(false)
+            const errorMessage = error instanceof Error ? error.message : "Failed to submit booking"
+            console.error("Booking error:", errorMessage)
+            throw new Error("Failed to process your booking. Please try again.")
         }
-    }, [onBookingComplete, onClose])
+    }, [createRequestRentalCostume, onBookingComplete])
 
-    return { isSubmitting, submitBooking }
+    return { isSubmitting: isRequestRentalCostumeLoading, submitBooking }
 }
+
 
 // Props interface
 interface RentalBookingDialogProps {
     isOpen: boolean
     onClose: () => void
     costumeInfo: CostumeRentalInfo
-    onBookingComplete?: (bookingData: RentalBookingFormData) => void
+    onBookingComplete?: (bookingData: RentalBookingFormData, response: any) => void
 }
 
 // Main component
@@ -166,23 +175,205 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
     costumeInfo,
     onBookingComplete
 }) => {
-    const stepManager = useStepManager()
-    const { isSubmitting, submitBooking } = useFormSubmission(onBookingComplete, onClose)
+    const [rentalResponse, setRentalResponse] = useState<any | null>(null)
+    const [showPaymentSuccess, setShowPaymentSuccess] = useState(false)
 
-    const form = useForm<RentalBookingFormData>({
-        resolver: zodResolver(rentalBookingSchema as any),
-        defaultValues: getDefaultFormValues(),
-        mode: "onChange"
+    const stepManager = useStepManager()
+
+    // Handle successful booking completion
+    const handleBookingComplete = useCallback((data: RentalBookingFormData, response: any) => {
+        console.log("Booking completed:", data, response)
+        setRentalResponse(response)
+        setShowPaymentSuccess(true)
+        onBookingComplete?.(data, response)
+    }, [onBookingComplete])
+
+    const { isSubmitting, submitBooking } = useFormSubmission(handleBookingComplete,)
+
+    const { user } = useSupabaseAuth()
+
+    const params = useParams()
+    const costumeId = params?.id as string
+
+    const form = useForm<PartialRentalBookingFormData>({
+        resolver: zodResolver(partialRentalBookingSchema),
+        defaultValues: getDefaultFormValues(costumeId),
+        mode: "onChange",
+        reValidateMode: "onChange",
+        shouldUnregister: false,
+        criteriaMode: "all"
     })
 
-    // Step validation
+    // Debug form state
+    React.useEffect(() => {
+        const subscription = form.watch((value) => {
+            console.log("Form values changed:", value)
+        })
+        return () => subscription.unsubscribe()
+    }, [form])
+
+    // Helper function to check if a value is not empty
+    const isNotEmpty = (value: any): boolean => {
+        if (typeof value === 'string') {
+            return value.trim() !== ''
+        }
+        if (typeof value === 'boolean') {
+            return value === true
+        }
+        return value !== null && value !== undefined
+    }
+
+    // Handle PayMongo redirect
+    const handlePayNow = useCallback(() => {
+        if (rentalResponse?.data.payment.checkout_url) {
+            // Open PayMongo checkout in a new window/tab
+            window.open(rentalResponse.data.payment.checkout_url, '_blank', 'noopener,noreferrer')
+
+            // Optionally close the dialog after opening payment
+            // onClose()
+        }
+    }, [rentalResponse])
+
+    // Handle dialog close
+    const handleDialogClose = useCallback(() => {
+        if (!isSubmitting) {
+            // Reset states when closing
+            setShowPaymentSuccess(false)
+            setRentalResponse(null)
+            onClose()
+        }
+    }, [isSubmitting, onClose])
+
+    // Step validation function
     const validateCurrentStep = useCallback(async (): Promise<boolean> => {
-        const fieldsToValidate = STEP_FIELD_MAP[stepManager.currentStep]
-        return await form.trigger(fieldsToValidate)
-    }, [form, stepManager.currentStep])
+        const currentData = form.getValues()
+        console.log("Validating step:", stepManager.currentStep, "with data:", currentData)
+
+        try {
+            let isValid = true
+
+            switch (stepManager.currentStep) {
+                case "schedule":
+                    if (!currentData.schedule) {
+                        console.warn("Schedule data is missing")
+                        return false
+                    }
+
+                    const scheduleFields = ['start_date', 'end_date', 'delivery_address']
+                    const missingSchedule = scheduleFields.filter(field => {
+                        const value = currentData.schedule![field as keyof typeof currentData.schedule]
+                        return !isNotEmpty(value)
+                    })
+
+                    if (missingSchedule.length > 0) {
+                        console.warn("Schedule validation failed - missing:", missingSchedule)
+                        for (const field of missingSchedule) {
+                            await form.trigger(`schedule.${field}` as any)
+                        }
+                        return false
+                    }
+
+                    const startDate = new Date(currentData.schedule.start_date!)
+                    const endDate = new Date(currentData.schedule.end_date!)
+
+                    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                        console.warn("Invalid dates detected")
+                        return false
+                    }
+
+                    if (startDate >= endDate) {
+                        console.warn("End date must be after start date")
+                        return false
+                    }
+
+                    break
+
+                case "personal":
+                    if (!currentData.personal_details) {
+                        console.warn("Personal details data is missing")
+                        return false
+                    }
+
+                    const personalFields = ['first_name', 'last_name', 'email', 'phone_number', 'date_of_birth']
+                    const missingPersonal = personalFields.filter(field => {
+                        const value = currentData.personal_details![field as keyof typeof currentData.personal_details]
+                        return !isNotEmpty(value)
+                    })
+
+                    if (missingPersonal.length > 0) {
+                        console.warn("Personal details validation failed - missing:", missingPersonal)
+                        for (const field of missingPersonal) {
+                            await form.trigger(`personal_details.${field}` as any)
+                        }
+                        return false
+                    }
+
+                    const email = currentData.personal_details.email
+                    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                        await form.trigger('personal_details.email')
+                        return false
+                    }
+
+                    const phone = currentData.personal_details.phone_number
+                    if (phone && !/^\+63\d{10}$/.test(phone)) {
+                        await form.trigger('personal_details.phone_number')
+                        return false
+                    }
+
+                    break
+
+                case "payment":
+                    if (!currentData.payment_method) {
+                        console.warn("Payment method data is missing")
+                        return false
+                    }
+
+                    if (!isNotEmpty(currentData.payment_method.gcash_number)) {
+                        console.warn("Payment validation failed - missing GCash number")
+                        await form.trigger('payment_method.gcash_number')
+                        return false
+                    }
+
+                    const gcashNumber = currentData.payment_method.gcash_number
+                    if (gcashNumber && !/^\+63\d{10}$/.test(gcashNumber)) {
+                        await form.trigger('payment_method.gcash_number')
+                        return false
+                    }
+
+                    break
+
+                case "summary":
+                    if (!currentData.agreements) {
+                        console.warn("Agreements data is missing")
+                        return false
+                    }
+
+                    const agreementFields = ['terms_accepted', 'damage_policy', 'cancellation_policy']
+                    const unacceptedAgreements = agreementFields.filter(field => {
+                        return currentData.agreements![field as keyof typeof currentData.agreements] !== true
+                    })
+
+                    if (unacceptedAgreements.length > 0) {
+                        console.warn("Agreements validation failed - unaccepted:", unacceptedAgreements)
+                        for (const field of unacceptedAgreements) {
+                            await form.trigger(`agreements.${field}` as any)
+                        }
+                        return false
+                    }
+
+                    isValid = await form.trigger()
+                    return isValid
+            }
+
+            return true
+        } catch (error) {
+            console.error("Step validation error:", error)
+            return false
+        }
+    }, [form, stepManager.currentStep, isNotEmpty])
 
     // Navigation handlers
-    const handleNext = useCallback(async () => {
+    const handleNext = async () => {
         const isValid = await validateCurrentStep()
         if (!isValid) {
             console.warn("Step validation failed for:", stepManager.currentStep)
@@ -191,40 +382,65 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
 
         stepManager.markCompleted(stepManager.currentStep)
         stepManager.goToNext()
-    }, [validateCurrentStep, stepManager])
+    }
 
-    const handlePrevious = useCallback(() => {
+    const handlePrevious = () => {
         stepManager.goToPrevious()
-    }, [stepManager])
+    }
 
-    // Form submission
-    const handleSubmit: SubmitHandler<RentalBookingFormData> = useCallback(async (data) => {
-        // Final validation
-        const isValid = await form.trigger()
-        if (!isValid) {
-            console.log("Final form validation failed")
-            return
-        }
-
+    // Form submission handler with proper data preparation and validation
+    const handleSubmit: SubmitHandler<PartialRentalBookingFormData> = useCallback(async (formData) => {
         try {
-            await submitBooking(data)
-        } catch (error) {
-            // Handle Zod validation errors
-            if (error && typeof error === "object" && "issues" in error) {
-                const zodError = error as any
-                zodError.issues?.forEach((issue: any) => {
-                    const fieldPath = issue.path.join(".")
-                    form.setError(fieldPath as any, {
-                        type: "manual",
-                        message: issue.message
-                    })
-                })
+            console.log("Form submit handler called with:", formData)
+
+            const submissionData: RentalBookingFormData = {
+                costume_id: costumeId || formData.costume_id || "",
+                schedule: {
+                    start_date: formData.schedule?.start_date || "",
+                    end_date: formData.schedule?.end_date || "",
+                    delivery_method: formData.schedule?.delivery_method || "delivery",
+                    delivery_address: formData.schedule?.delivery_address || "",
+                    special_instructions: formData.schedule?.special_instructions || ""
+                },
+                personal_details: {
+                    user_id: user?.id || "",
+                    first_name: formData.personal_details?.first_name || "",
+                    last_name: formData.personal_details?.last_name || "",
+                    email: formData.personal_details?.email || "",
+                    phone_number: formData.personal_details?.phone_number || "",
+                    date_of_birth: formData.personal_details?.date_of_birth || ""
+                },
+                payment_method: {
+                    type: "gcash",
+                    gcash_number: formData.payment_method?.gcash_number || ""
+                },
+                agreements: {
+                    terms_accepted: formData.agreements?.terms_accepted || false,
+                    damage_policy: formData.agreements?.damage_policy || false,
+                    cancellation_policy: formData.agreements?.cancellation_policy || false
+                }
             }
+
+            console.log("Prepared submission data:", submissionData)
+
+            try {
+                rentalBookingSchema.parse(submissionData)
+            } catch (validationError) {
+                console.error("Final validation failed:", validationError)
+                throw new Error("Please complete all required fields")
+            }
+
+            await submitBooking(submissionData)
+
+        } catch (error) {
+            console.error("Form submission error:", error)
+            throw error
         }
-    }, [form, submitBooking])
+    }, [costumeId, submitBooking, user?.id])
 
     // Step content renderer
     const renderStepContent = useCallback((): React.ReactNode => {
+
         const stepComponents = {
             schedule: <ScheduleForm costumeInfo={costumeInfo} />,
             personal: <PersonalDetailsForm />,
@@ -233,13 +449,7 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
         }
 
         return stepComponents[stepManager.currentStep] || null
-    }, [stepManager.currentStep, costumeInfo])
-
-    const handleDialogClose = useCallback(() => {
-        if (!isSubmitting) {
-            onClose()
-        }
-    }, [isSubmitting, onClose])
+    }, [stepManager.currentStep, costumeInfo, showPaymentSuccess, rentalResponse, handlePayNow, handleDialogClose])
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogClose}>
@@ -248,7 +458,7 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
                             <Package className="h-6 w-6 text-rose-500" />
-                            Rent Costume - Delivery Only
+                            {showPaymentSuccess ? "Payment Required" : "Rent Costume - Delivery Only"}
                         </DialogTitle>
                         <Button
                             variant="ghost"
@@ -260,17 +470,12 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
                         </Button>
                     </div>
 
-                    <div className="space-y-4 mt-4">
-                        <Progress value={stepManager.progress} className="h-2" />
-                        <StepIndicators steps={stepManager.steps} />
-                    </div>
-
-                    <Alert className="bg-blue-50 border-blue-200">
-                        <Package className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-blue-800 font-medium">
-                            All rentals include free delivery to your specified address
-                        </AlertDescription>
-                    </Alert>
+                    {!showPaymentSuccess && (
+                        <div className="space-y-4 mt-4">
+                            <Progress value={stepManager.progress} className="h-2" />
+                            <StepIndicators steps={stepManager.steps} />
+                        </div>
+                    )}
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto px-1">
@@ -281,17 +486,57 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
                     </FormProvider>
                 </div>
 
-                <DialogFooter
-                    currentStepIndex={stepManager.currentStepIndex}
-                    totalSteps={stepManager.steps.length}
-                    canGoPrevious={stepManager.canGoPrevious}
-                    canGoNext={stepManager.canGoNext}
-                    isLastStep={stepManager.isLastStep}
-                    isSubmitting={isSubmitting}
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                    onSubmit={form.handleSubmit(handleSubmit)}
-                />
+                {!showPaymentSuccess && (
+                    <div className="flex-shrink-0 border-t pt-4 mt-6">
+                        <div className="flex justify-between items-center">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handlePrevious}
+                                disabled={!stepManager.canGoPrevious || isSubmitting}
+                                className="flex items-center gap-2"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                Previous
+                            </Button>
+
+                            <Badge variant="secondary" className="text-xs px-3 py-1">
+                                Step {stepManager.currentStepIndex + 1} of {stepManager.steps.length}
+                            </Badge>
+
+                            {stepManager.isLastStep ? (
+                                <Button
+                                    type="submit"
+                                    onClick={form.handleSubmit(handleSubmit)}
+                                    disabled={isSubmitting}
+                                    className="bg-rose-500 hover:bg-rose-600 text-white flex items-center gap-2 min-w-[140px]"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check className="h-4 w-4" />
+                                            Confirm Booking
+                                        </>
+                                    )}
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    onClick={handleNext}
+                                    disabled={!stepManager.canGoNext || isSubmitting}
+                                    className="bg-rose-500 hover:bg-rose-600 text-white flex items-center gap-2"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     )
@@ -329,80 +574,5 @@ const StepIndicators: React.FC<StepIndicatorsProps> = ({ steps }) => (
                 </div>
             </div>
         ))}
-    </div>
-)
-
-// Dialog footer component
-interface DialogFooterProps {
-    currentStepIndex: number
-    totalSteps: number
-    canGoPrevious: boolean
-    canGoNext: boolean
-    isLastStep: boolean
-    isSubmitting: boolean
-    onPrevious: () => void
-    onNext: () => void
-    onSubmit: () => void
-}
-
-const DialogFooter: React.FC<DialogFooterProps> = ({
-    currentStepIndex,
-    totalSteps,
-    canGoPrevious,
-    canGoNext,
-    isLastStep,
-    isSubmitting,
-    onPrevious,
-    onNext,
-    onSubmit
-}) => (
-    <div className="flex-shrink-0 border-t pt-4 mt-6">
-        <div className="flex justify-between items-center">
-            <Button
-                type="button"
-                variant="outline"
-                onClick={onPrevious}
-                disabled={!canGoPrevious || isSubmitting}
-                className="flex items-center gap-2"
-            >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-            </Button>
-
-            <Badge variant="secondary" className="text-xs px-3 py-1">
-                Step {currentStepIndex + 1} of {totalSteps}
-            </Badge>
-
-            {isLastStep ? (
-                <Button
-                    type="submit"
-                    onClick={onSubmit}
-                    disabled={isSubmitting}
-                    className="bg-rose-500 hover:bg-rose-600 text-white flex items-center gap-2 min-w-[140px]"
-                >
-                    {isSubmitting ? (
-                        <>
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            Processing...
-                        </>
-                    ) : (
-                        <>
-                            <Check className="h-4 w-4" />
-                            Confirm Booking
-                        </>
-                    )}
-                </Button>
-            ) : (
-                <Button
-                    type="button"
-                    onClick={onNext}
-                    disabled={!canGoNext || isSubmitting}
-                    className="bg-rose-500 hover:bg-rose-600 text-white flex items-center gap-2"
-                >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
-            )}
-        </div>
     </div>
 )

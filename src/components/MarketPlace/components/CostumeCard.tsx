@@ -26,12 +26,7 @@ const formatCurrency = (amount: number): string => {
   }).format(amount)
 }
 
-const slugify = (text: string): string =>
-  text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+
 
 const getRentPrice = (costume: MarketplaceCostume) => {
   if (costume.pricing?.rental?.price) {

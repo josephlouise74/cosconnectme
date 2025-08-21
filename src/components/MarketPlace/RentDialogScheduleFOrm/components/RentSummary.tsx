@@ -8,29 +8,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { Badge } from "@/components/ui/badge"
-import { CostumeRentalInfo, RentalBookingFormData } from "./type"
+import { CostumeRentalInfo, PartialRentalBookingFormData } from "./type"
 
 interface RentSummaryProps {
     costumeInfo: CostumeRentalInfo
 }
 
 export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
-    const { control, watch } = useFormContext<RentalBookingFormData>()
+    const { control, watch } = useFormContext<PartialRentalBookingFormData>()
 
     const formData = watch()
-    const startDate = formData.schedule?.startDate
-    const endDate = formData.schedule?.endDate
+
+    // Parse dates from ISO strings (matching schema format)
+    const startDateStr = formData.schedule?.start_date
+    const endDateStr = formData.schedule?.end_date
+
+    const startDate = startDateStr ? new Date(startDateStr) : null
+    const endDate = endDateStr ? new Date(endDateStr) : null
 
     const rentalInfo = React.useMemo(() => {
-        if (!startDate || !endDate) return null
+        if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            return null
+        }
 
         const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-        const subtotal = days * costumeInfo.dailyRate
+        const subtotal = days * (costumeInfo.dailyRate || 0)
 
         return {
             days,
             subtotal,
-            total: subtotal + costumeInfo.securityDeposit,
+            total: subtotal + (costumeInfo.securityDeposit || 0),
         }
     }, [startDate, endDate, costumeInfo.dailyRate, costumeInfo.securityDeposit])
 
@@ -52,16 +59,20 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                 <CardContent>
                     <div className="flex gap-4">
                         <img
-                            src={costumeInfo.images.main.front || "/placeholder.svg"}
+                            src={costumeInfo.images?.main?.front || costumeInfo.image || "/placeholder.svg"}
                             alt={costumeInfo.name}
                             className="w-20 h-24 object-cover rounded-lg"
                         />
                         <div className="flex-1">
                             <h3 className="font-semibold text-lg">{costumeInfo.name}</h3>
-                            <p className="text-gray-600">by {costumeInfo.brand}</p>
+                            {costumeInfo.brand && <p className="text-gray-600">by {costumeInfo.brand}</p>}
                             <div className="flex gap-2 mt-2">
-                                <Badge variant="secondary">{costumeInfo.category}</Badge>
-                                <Badge variant="outline">Size {costumeInfo.size}</Badge>
+                                {costumeInfo.category && (
+                                    <Badge variant="secondary">{costumeInfo.category}</Badge>
+                                )}
+                                {costumeInfo.size && (
+                                    <Badge variant="outline">Size {costumeInfo.size}</Badge>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -79,18 +90,24 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                 <CardContent className="space-y-3">
                     <div className="flex justify-between">
                         <span className="text-gray-600">Start Date:</span>
-                        <span className="font-medium">{startDate?.toLocaleDateString()}</span>
+                        <span className="font-medium">
+                            {startDate ? startDate.toLocaleDateString() : "Not selected"}
+                        </span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-600">End Date:</span>
-                        <span className="font-medium">{endDate?.toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-gray-600">Duration:</span>
                         <span className="font-medium">
-                            {rentalInfo?.days} day{rentalInfo?.days !== 1 ? "s" : ""}
+                            {endDate ? endDate.toLocaleDateString() : "Not selected"}
                         </span>
                     </div>
+                    {rentalInfo && (
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Duration:</span>
+                            <span className="font-medium">
+                                {rentalInfo.days} day{rentalInfo.days !== 1 ? "s" : ""}
+                            </span>
+                        </div>
+                    )}
                     <div className="flex justify-between">
                         <span className="text-gray-600">Delivery Method:</span>
                         <span className="font-medium text-green-600 flex items-center gap-1">
@@ -110,11 +127,13 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-gray-800">{formData.schedule?.deliveryAddress}</p>
-                    {formData.schedule?.specialInstructions && (
+                    <p className="text-gray-800">
+                        {formData.schedule?.delivery_address || "No address provided"}
+                    </p>
+                    {formData.schedule?.special_instructions && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                             <p className="text-sm text-gray-600">
-                                <strong>Special Instructions:</strong> {formData.schedule.specialInstructions}
+                                <strong>Special Instructions:</strong> {formData.schedule.special_instructions}
                             </p>
                         </div>
                     )}
@@ -133,16 +152,16 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                     <div className="flex justify-between">
                         <span className="text-gray-600">Name:</span>
                         <span className="font-medium">
-                            {formData.personalDetails?.firstName} {formData.personalDetails?.lastName}
+                            {formData.personal_details?.first_name} {formData.personal_details?.last_name}
                         </span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-600">Email:</span>
-                        <span className="font-medium">{formData.personalDetails?.email}</span>
+                        <span className="font-medium">{formData.personal_details?.email}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-600">Phone:</span>
-                        <span className="font-medium">{formData.personalDetails?.phoneNumber}</span>
+                        <span className="font-medium">{formData.personal_details?.phone_number}</span>
                     </div>
                 </CardContent>
             </Card>
@@ -160,10 +179,10 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                         <span className="text-gray-600">Payment Type:</span>
                         <span className="font-medium">GCash</span>
                     </div>
-                    {formData.paymentMethod?.gcashNumber && (
+                    {formData.payment_method?.gcash_number && (
                         <div className="flex justify-between mt-2">
                             <span className="text-gray-600">GCash Number:</span>
-                            <span className="font-medium">{formData.paymentMethod.gcashNumber}</span>
+                            <span className="font-medium">{formData.payment_method.gcash_number}</span>
                         </div>
                     )}
                 </CardContent>
@@ -185,7 +204,7 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                             </div>
                             <div className="flex justify-between">
                                 <span>Security Deposit</span>
-                                <span>₱{costumeInfo.securityDeposit}</span>
+                                <span>₱{costumeInfo.securityDeposit || 0}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span>Delivery</span>
@@ -210,11 +229,14 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                 <CardContent className="space-y-4">
                     <FormField
                         control={control}
-                        name="agreements.termsAccepted"
+                        name="agreements.terms_accepted"
                         render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                 <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                    <Checkbox
+                                        checked={field.value || false}
+                                        onCheckedChange={field.onChange}
+                                    />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
                                     <FormLabel>I accept the Terms and Conditions</FormLabel>
@@ -229,11 +251,14 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
 
                     <FormField
                         control={control}
-                        name="agreements.damagePolicy"
+                        name="agreements.damage_policy"
                         render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                 <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                    <Checkbox
+                                        checked={field.value || false}
+                                        onCheckedChange={field.onChange}
+                                    />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
                                     <FormLabel>I acknowledge the Damage Policy</FormLabel>
@@ -248,11 +273,14 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
 
                     <FormField
                         control={control}
-                        name="agreements.cancellationPolicy"
+                        name="agreements.cancellation_policy"
                         render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                 <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                    <Checkbox
+                                        checked={field.value || false}
+                                        onCheckedChange={field.onChange}
+                                    />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
                                     <FormLabel>I acknowledge the Cancellation Policy</FormLabel>

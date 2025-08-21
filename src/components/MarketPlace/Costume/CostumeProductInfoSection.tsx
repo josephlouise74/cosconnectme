@@ -305,12 +305,14 @@ const CostumeInformation: React.FC<{ costume: CostumeByName }> = ({ costume }) =
                         >
                             Rent Now
                         </Button>
+
                         <RentalBookingDialog
                             isOpen={isBookingDialogOpen}
                             onClose={() => setIsBookingDialogOpen(false)}
                             costumeInfo={{
                                 id: costume.id.toString(),
                                 name: costume.name,
+                                price: Number(costume.pricing?.rental?.price) || 0,  // Add this line
                                 brand: costume.brand || '',
                                 category: costume.category || '',
                                 size: costume.sizes || '',

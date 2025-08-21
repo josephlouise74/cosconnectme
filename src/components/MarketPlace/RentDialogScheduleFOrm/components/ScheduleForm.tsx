@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Calendar, Clock, Info, MapPin, Truck } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useFormContext } from "react-hook-form"
-import { CostumeRentalInfo, RentalBookingFormData } from "./type"
+import { CostumeRentalInfo, PartialRentalBookingFormData } from "./type"
 
 interface ScheduleFormProps {
     costumeInfo: CostumeRentalInfo
@@ -40,15 +40,17 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         watch,
         setValue,
         formState: { errors },
-    } = useFormContext<RentalBookingFormData>()
+    } = useFormContext<PartialRentalBookingFormData>()
+
     const [dateSelection, setDateSelection] = useState<DateSelection>({
         startDate: null,
         endDate: null,
     })
     const [isSelectingEndDate, setIsSelectingEndDate] = useState(false)
 
-    const watchedStartDate = watch("schedule.startDate")
-    const watchedEndDate = watch("schedule.endDate")
+    // Watch the form values using the correct field names from schema
+    const watchedStartDate = watch("schedule.start_date")
+    const watchedEndDate = watch("schedule.end_date")
 
     // Generate calendar days for current and next month
     const calendarData = useMemo<MonthData[]>(() => {
@@ -62,32 +64,59 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         ]
     }, [costumeInfo.unavailableDates])
 
+    // Calculate rental info from form values (which are ISO strings)
     const rentalInfo = useMemo(() => {
         if (!watchedStartDate || !watchedEndDate) return null
 
-        // Ensure dates are at the start of the day for accurate day calculation
-        const start = new Date(watchedStartDate)
-        const end = new Date(watchedEndDate)
-        start.setHours(0, 0, 0, 0)
-        end.setHours(0, 0, 0, 0)
+        try {
+            // Parse ISO strings to dates
+            const start = new Date(watchedStartDate)
+            const end = new Date(watchedEndDate)
 
-        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-        const subtotal = Math.max(1, days) * (costumeInfo.dailyRate || 0)
-        const securityDeposit = costumeInfo.securityDeposit || 0
+            // Ensure dates are valid
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
 
-        return {
-            days,
-            subtotal,
-            total: subtotal + securityDeposit,
+            // Set to start of day for accurate calculation
+            start.setHours(0, 0, 0, 0)
+            end.setHours(0, 0, 0, 0)
+
+            const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+            const subtotal = Math.max(1, days) * (costumeInfo.dailyRate || 0)
+            const securityDeposit = costumeInfo.securityDeposit || 0
+
+            return {
+                days,
+                subtotal,
+                total: subtotal + securityDeposit,
+            }
+        } catch (error) {
+            console.error("Error calculating rental info:", error)
+            return null
         }
     }, [watchedStartDate, watchedEndDate, costumeInfo.dailyRate, costumeInfo.securityDeposit])
+
+    // Sync local state with form values on load
+    useState(() => {
+        if (watchedStartDate) {
+            const startDate = new Date(watchedStartDate)
+            if (!isNaN(startDate.getTime())) {
+                setDateSelection(prev => ({ ...prev, startDate }))
+            }
+        }
+        if (watchedEndDate) {
+            const endDate = new Date(watchedEndDate)
+            if (!isNaN(endDate.getTime())) {
+                setDateSelection(prev => ({ ...prev, endDate }))
+            }
+        }
+    })
 
     const handleDateClick = (date: Date) => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
         if (date < today) return
-        if (costumeInfo.unavailableDates?.some(unavailable => {
+        if (costumeInfo.unavailableDates?.some((unavailable: Date) => {
             const unavailableDate = new Date(unavailable)
             unavailableDate.setHours(0, 0, 0, 0)
             return date.toDateString() === unavailableDate.toDateString()
@@ -100,23 +129,32 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 const startDate = date > dateSelection.startDate ? dateSelection.startDate : date
 
                 setDateSelection({ startDate, endDate })
-                setValue("schedule.startDate", startDate)
-                setValue("schedule.endDate", endDate)
+
+                // Set form values as ISO strings (matching schema)
+                setValue("schedule.start_date", startDate.toISOString())
+                setValue("schedule.end_date", endDate.toISOString())
+
                 setIsSelectingEndDate(false)
             } else {
                 // Selecting start date
                 const startDate = date
                 setDateSelection({ startDate, endDate: null })
-                setValue("schedule.startDate", startDate)
-                setValue("schedule.endDate", null as any, { shouldValidate: true })
+
+                // Set form values as ISO strings
+                setValue("schedule.start_date", startDate.toISOString())
+                setValue("schedule.end_date", "")
+
                 setIsSelectingEndDate(true)
             }
         } else {
             // Reset selection
             const startDate = date
             setDateSelection({ startDate, endDate: null })
-            setValue("schedule.startDate", startDate)
-            setValue("schedule.endDate", null as any, { shouldValidate: true })
+
+            // Set form values as ISO strings
+            setValue("schedule.start_date", startDate.toISOString())
+            setValue("schedule.end_date", "")
+
             setIsSelectingEndDate(true)
         }
     }
@@ -128,14 +166,16 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         today.setHours(0, 0, 0, 0)
 
         const isPast = date < today
-        const isUnavailable = costumeInfo.unavailableDates?.some(unavailable => {
+        const isUnavailable = costumeInfo.unavailableDates?.some((unavailable: Date) => {
             const unavailableDate = new Date(unavailable)
             unavailableDate.setHours(0, 0, 0, 0)
             return date.toDateString() === unavailableDate.toDateString()
         }) || false
+
         const isSelected =
             (dateSelection.startDate && date.toDateString() === dateSelection.startDate.toDateString()) ||
             (dateSelection.endDate && date.toDateString() === dateSelection.endDate.toDateString())
+
         const isInRange =
             dateSelection.startDate &&
             dateSelection.endDate &&
@@ -152,6 +192,13 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
             return `${baseClasses} bg-rose-100 text-rose-800 hover:bg-rose-200`
         }
         return `${baseClasses} hover:bg-rose-50 text-gray-700`
+    }
+
+    const clearDateSelection = () => {
+        setDateSelection({ startDate: null, endDate: null })
+        setValue("schedule.start_date", "")
+        setValue("schedule.end_date", "")
+        setIsSelectingEndDate(false)
     }
 
     return (
@@ -190,7 +237,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {calendarData.map((monthData, monthIndex) => (
+                        {calendarData.map((monthData, _) => (
                             <div key={monthData.month} className="space-y-4">
                                 <h3 className="text-lg font-semibold text-center">
                                     {monthData.monthName} {monthData.year}
@@ -264,12 +311,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                    setDateSelection({ startDate: null, endDate: null })
-                                    setValue("schedule.startDate", null as any)
-                                    setValue("schedule.endDate", null as any)
-                                    setIsSelectingEndDate(false)
-                                }}
+                                onClick={clearDateSelection}
                                 className="mt-3 text-rose-600 border-rose-200 hover:bg-rose-50"
                             >
                                 Clear Selection
@@ -277,27 +319,21 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                         </div>
                     )}
 
-                    {errors.schedule && "startDate" in errors.schedule && (
+                    {/* Form validation errors */}
+                    {errors.schedule?.start_date && (
                         <p className="text-sm text-red-600 mt-2">
-                            {typeof errors.schedule.startDate === "object" &&
-                                errors.schedule.startDate !== null &&
-                                "message" in errors.schedule.startDate
-                                ? String(errors.schedule.startDate.message)
-                                : "Invalid start date"}
+                            {errors.schedule.start_date.message}
                         </p>
                     )}
-                    {errors.schedule && "endDate" in errors.schedule && (
+                    {errors.schedule?.end_date && (
                         <p className="text-sm text-red-600 mt-2">
-                            {typeof errors.schedule.endDate === "object" &&
-                                errors.schedule.endDate !== null &&
-                                "message" in errors.schedule.endDate
-                                ? String(errors.schedule.endDate.message)
-                                : "Invalid end date"}
+                            {errors.schedule.end_date.message}
                         </p>
                     )}
                 </CardContent>
             </Card>
 
+            {/* Delivery Address */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -309,7 +345,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 <CardContent>
                     <FormField
                         control={control}
-                        name="schedule.deliveryAddress"
+                        name="schedule.delivery_address"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Complete Address</FormLabel>
@@ -339,7 +375,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 <CardContent>
                     <FormField
                         control={control}
-                        name="schedule.specialInstructions"
+                        name="schedule.special_instructions"
                         render={({ field }) => (
                             <FormItem>
                                 <FormControl>
@@ -402,7 +438,6 @@ const generateMonthData = (monthStart: Date, unavailableDates: Date[]): MonthDat
     today.setHours(0, 0, 0, 0)
 
     const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
     const startDate = new Date(firstDay)
     startDate.setDate(startDate.getDate() - firstDay.getDay()) // Start from Sunday
 
