@@ -198,8 +198,8 @@ const SidebarLender = memo(() => {
                     href: "/messages",
                     badge: 3 // Replace with actual data
                 },
-                { title: "Rental List", icon: ListOrdered, href: "/lender/rentals/list" },
-                { title: "Payment History", icon: CreditCard, href: "/lender/rentals/payments" },
+                { title: "Rental List", icon: ListOrdered, href: "/lender/rental/list" },
+                { title: "Payment History", icon: CreditCard, href: "/lender/rental/payments" },
             ]
         },
         {

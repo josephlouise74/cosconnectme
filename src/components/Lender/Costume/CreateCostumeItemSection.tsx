@@ -316,7 +316,7 @@ const CreateCostumeItemSection: React.FC = () => {
                 await createCostumeApi(preparedData);
                 // Invalidate queries for this lender and all costumes
                 toast.success('Costume created successfully!');
-                /*     router.push('/lender/products/list'); */
+                router.push('/lender/products/list');
             } finally {
                 setIsUploading(false);
                 setIsCreating(false);
