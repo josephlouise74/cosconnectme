@@ -1,5 +1,4 @@
 import { z } from "zod"
-
 // Schema definitions with proper validation
 export const scheduleSchema = z.object({
     start_date: z.string().min(1, "Start date is required"),
@@ -20,7 +19,6 @@ export const personalDetailsSchema = z.object({
         const today = new Date()
         const age = today.getFullYear() - birthDate.getFullYear()
         const monthDiff = today.getMonth() - birthDate.getMonth()
-
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
             return age - 1 >= 18
         }
@@ -30,7 +28,12 @@ export const personalDetailsSchema = z.object({
 
 export const paymentMethodSchema = z.object({
     type: z.enum(["gcash"]).default("gcash"),
-    gcash_number: z.string().optional()
+    payment_gcash_number: z.string().min(1, "Payment GCash number is required")
+        .regex(/^\+63\d{10}$/, "Please enter a valid Philippine GCash number"),
+    refund_gcash_number: z.string().min(1, "Refund GCash number is required")
+        .regex(/^\+63\d{10}$/, "Please enter a valid Philippine GCash number"),
+    refund_account_name: z.string().min(1, "Refund account name is required")
+        .min(2, "Name must be at least 2 characters")
 })
 
 export const agreementsSchema = z.object({
@@ -67,6 +70,7 @@ export type PartialRentalBookingFormData = z.infer<typeof partialRentalBookingSc
 
 // Type for booking steps
 export type BookingStep = "schedule" | "personal" | "payment" | "summary"
+
 // Interface for booking step configuration
 // Additional types for step configuration
 export interface BookingStepConfig {
@@ -87,7 +91,6 @@ export interface CostumeRentalInfo {
     size?: string
     [key: string]: any
 }
-
 
 export interface RentalCalculation {
     dailyRate: number

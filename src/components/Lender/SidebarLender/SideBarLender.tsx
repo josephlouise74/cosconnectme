@@ -203,6 +203,11 @@ const SidebarLender = memo(() => {
             ]
         },
         {
+            title: "Accounting",
+            icon: CreditCard,
+            href: "/lender/accounting",
+        },
+        {
             title: "Settings",
             icon: Settings,
             href: "/settings",
