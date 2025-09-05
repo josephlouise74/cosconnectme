@@ -1,4 +1,5 @@
 import { z } from "zod"
+
 // Schema definitions with proper validation
 export const scheduleSchema = z.object({
     start_date: z.string().min(1, "Start date is required"),
@@ -9,8 +10,8 @@ export const scheduleSchema = z.object({
 })
 
 export const personalDetailsSchema = z.object({
-    first_name: z.string().min(1, "First name is required").min(2, "First name must be at least 2 characters"),
     user_id: z.string().min(1, "User ID is required"),
+    first_name: z.string().min(1, "First name is required").min(2, "First name must be at least 2 characters"),
     last_name: z.string().min(1, "Last name is required").min(2, "Last name must be at least 2 characters"),
     email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
     phone_number: z.string().min(1, "Phone number is required").regex(/^\+63\d{10}$/, "Please enter a valid Philippine phone number"),
@@ -28,7 +29,7 @@ export const personalDetailsSchema = z.object({
 
 export const paymentMethodSchema = z.object({
     type: z.enum(["gcash"]).default("gcash"),
-    payment_gcash_number: z.string().min(1, "Payment GCash number is required")
+    gcash_number: z.string().min(1, "GCash number is required")
         .regex(/^\+63\d{10}$/, "Please enter a valid Philippine GCash number"),
     refund_gcash_number: z.string().min(1, "Refund GCash number is required")
         .regex(/^\+63\d{10}$/, "Please enter a valid Philippine GCash number"),
@@ -52,12 +53,17 @@ export const rentalBookingSchema = z.object({
 })
 
 // Partial schema for step-by-step validation (optional fields for intermediate steps)
+export const partialScheduleSchema = scheduleSchema.partial()
+export const partialPersonalDetailsSchema = personalDetailsSchema.partial()
+export const partialPaymentMethodSchema = paymentMethodSchema.partial()
+export const partialAgreementsSchema = agreementsSchema.partial()
+
 export const partialRentalBookingSchema = z.object({
     costume_id: z.string().optional(),
-    schedule: scheduleSchema.partial().optional(),
-    personal_details: personalDetailsSchema.partial().optional(),
-    payment_method: paymentMethodSchema.partial().optional(),
-    agreements: agreementsSchema.partial().optional(),
+    schedule: partialScheduleSchema.optional(),
+    personal_details: partialPersonalDetailsSchema.optional(),
+    payment_method: partialPaymentMethodSchema.optional(),
+    agreements: partialAgreementsSchema.optional(),
 })
 
 // Type exports
@@ -72,7 +78,6 @@ export type PartialRentalBookingFormData = z.infer<typeof partialRentalBookingSc
 export type BookingStep = "schedule" | "personal" | "payment" | "summary"
 
 // Interface for booking step configuration
-// Additional types for step configuration
 export interface BookingStepConfig {
     id: BookingStep
     title: string

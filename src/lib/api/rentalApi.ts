@@ -261,51 +261,63 @@ export const useCreateRequestRentalCostume = () => {
 
 
 
-interface ConfirmPaymentResponse {
-    success: boolean
-    message: string
+export interface ConfirmPaymentResponse {
+    success: boolean;
+    message: string;
     data: {
-        payment_id: string
-        reference_code: string
-        rental_id: string
-        status: string
-        amount: string
-        currency: string
-        processed_at: string
-        payment_method: string
+        payment_id: string;
+        reference_code: string;
+        session_id: string;
+        rental_id: string;
+        status_change: {
+            previous_status: string;
+            current_status: string;
+            payment_service_status: string;
+        };
+        payment_details: {
+            amount: number;
+            currency: string;
+            processed_at: string;
+            payment_method: string;
+            payment_reference: string;
+        };
         rental: {
-            id: string
-            status: string
-            costume_name: string
-            customer_name: string
-            reference_code: string
-        }
-    }
-    already_paid: boolean
+            id: string;
+            status: string;
+            costume_name: string;
+            customer_name: string;
+            reference_code: string;
+        };
+        updated_at: string;
+    };
+    already_paid?: boolean;
 }
 
 export const useConfirmPayment = () => {
     const confirmPaymentApiRequest = async (
-        payload: { session_id: string; user_id: string }
+        payload: { reference: string }
     ): Promise<ConfirmPaymentResponse> => {
         const response = await axiosApiClient.post<ConfirmPaymentResponse>(
-            "/rental/confirm-payment",
+            `/rental/confirm-payment/${payload.reference}`,
             payload
-        )
-        return response.data
-    }
+        );
+
+        console.log("response", response)
+        return response.data;
+    };
+
 
     const { mutate: confirmPayment, data, error, isPending: isLoading } = useMutation({
         mutationFn: confirmPaymentApiRequest,
-    })
+    });
 
     return {
         confirmPayment,
         data,
         error,
         isLoading,
-    }
-}
+    };
+};
 
 
 
@@ -492,68 +504,34 @@ export const useGetLenderRentalsRequests = ({ userId, page = 1, limit = 10, stat
 
 
 
-// ✅ Your updated data type
+
+
+// ✅ Updated data type matching the actual API response
 export interface GetRentalByIdResponse {
     success: boolean;
     data: {
-        rental: {
-            id: string;
-            reference_code: string;
-            costume_id: string;
-            renter_uid: string;
-            costume_snapshot: {
-                id: string;
-                name: string;
-                brand: string;
-                sizes: string;
-                category: string;
-                lender_info: {
-                    uid: string;
-                    name: string;
-                    email: string;
-                    phone: string;
-                    is_business: boolean;
-                };
-                main_images: {
-                    front: string;
-                    back: string;
-                };
-                rental_price: string;
-                security_deposit: string;
-            };
-            renter_snapshot: {
-                uid: string;
-                name: string;
-                email: string;
-                phone: string;
-                address: string;
-            };
-            start_date: string;
-            end_date: string;
-            actual_return_date: string | null;
-            rental_amount: string;
-            security_deposit: string;
-            total_amount: string;
-            extended_days: number;
-            extension_fee: string;
-            status: string;
-            initial_condition_notes: string | null;
-            return_condition_notes: string | null;
-            damage_reported: boolean;
-            damage_cost: string;
-            pickup_location: string;
-            delivery_method: string;
-            special_instructions: string | null;
-            notes: string | null;
-            created_at: string;
-            updated_at: string;
-            duration_days: number;
-            is_overdue: boolean;
-            days_overdue: number;
-            start_date_formatted: string;
-            end_date_formatted: string;
-            actual_return_date_formatted: string | null;
-        };
+        id: string;
+        reference_code: string;
+        status: string;
+        start_date: string;
+        end_date: string;
+        actual_return_date: string | null;
+        duration_days: number;
+        rental_amount: string;
+        security_deposit: string;
+        total_amount: string;
+        extended_days: number;
+        extension_fee: string;
+        damage_reported: boolean;
+        damage_cost: string;
+        pickup_location: string;
+        delivery_method: string;
+        special_instructions: string;
+        initial_condition_notes: string | null;
+        return_condition_notes: string | null;
+        notes: string;
+        accepted_at: string | null;
+        accepted_by: string | null;
         costume: {
             id: string;
             name: string;
@@ -562,124 +540,105 @@ export interface GetRentalByIdResponse {
             sizes: string;
             rental_price: string;
             security_deposit: string;
-            main_images: {
-                front: string;
-                back: string;
-            };
-            additional_images: {
-                url: string;
-                order: number;
-                alt_text: string;
-            }[];
             description: string;
-            is_available: boolean;
-            lender_uid: string;
-            created_at: string;
-        };
-        lender: {
-            uid: string;
-            username: string;
-            email: string;
-            phone_number: string;
-            full_name: string;
-            first_name: string;
-            last_name: string;
-            profile_image: string;
-            status: string;
-            business_info: {
-                id: string;
-                business_name: string;
-                business_description: string;
-                business_type: string;
-                business_email: string;
-                business_phone_number: string;
-                business_telephone: string;
-                business_profile_image: string | null;
-                terms_and_conditions: string;
-                is_verified: boolean;
-            };
-            business_addresses: {
-                id: string;
-                business_info_id: string;
-                business_address: string;
-                street: string;
-                barangay: string;
-                zip_code: string;
-                province: string;
-                region: string;
-                country: string;
-                city: {
-                    id: string;
-                    name: string;
-                };
-                is_primary: boolean;
-                created_at: string;
-                updated_at: string;
-            }[];
-            display_name: string;
-            contact_phone: string;
-            contact_email: string;
+            themes: string[];
+            gender: string;
+            main_image: string;
+            images: string[];
+            availability_status: boolean;
         };
         renter: {
             uid: string;
-            username: string;
+            name: string;
             email: string;
-            phone_number: string;
-            full_name: string;
-            first_name: string;
-            last_name: string;
+            phone: string;
             profile_image: string;
-            status: string;
-            addresses: any[];
-            display_name: string;
+        };
+        lender: {
+            uid: string;
+            name: string;
+            email: string;
+            phone: string;
+            profile_image: string;
         };
         payment_summary: {
+            status: string;
             total_paid: string;
             pending_amount: string;
-            refunded_amount: string;
+            total_refunded: string;
             payment_count: number;
-            last_payment_date: string;
-            active_session_id: string | null;
-            session_expires_at: string | null;
-            balance_due: string;
-            is_fully_paid: boolean;
-            next_payment_due: string | null;
+            refund_count: number;
+            last_payment_date: string | null;
+            has_active_session: boolean;
+            active_session?: {
+                id: string;
+                session_id: string;
+                checkout_url: string;
+                expires_at: string;
+                amount: string;
+            };
         };
-        payment_history: {
+        payments: {
             id: string;
             reference_code: string;
-            payment_type: string;
-            description: string;
-            amount: string;
-            currency: string;
             status: string;
-            gateway_status: string;
+            amount: string;
+            payment_type: string;
             payment_method: string;
-            payment_reference: string | null;
-            created_at: string;
+            payment_reference: string;
+            description: string;
             processed_at: string | null;
             receipt_url: string | null;
             receipt_number: string | null;
-            session_id: string | null;
-            checkout_url: string | null;
-            session_expires_at: string | null;
             processor_notes: string | null;
-            created_at_formatted: string;
-            processed_at_formatted: string;
+            paymongo_data: any;
+            metadata: any;
+            created_at: string;
+            updated_at: string;
         }[];
-        metadata: {
-            can_cancel: boolean;
-            can_extend: boolean;
-            can_return: boolean;
-            requires_payment: boolean;
-            status_color: string;
+        payment_gcash_number: string | null;
+        refund_gcash_number: string | null;
+        refund_account_name: string | null;
+        costume_snapshot: {
+            id: string;
+            name: string;
+            brand: string;
+            sizes: string;
+            category: string;
+            lender_info: {
+                uid: string;
+                name: string;
+                email: string;
+                phone: string;
+                is_business: boolean;
+            };
+            main_images: {
+                back: string;
+                front: string;
+            };
+            rental_price: string;
+            security_deposit: string;
         };
+        renter_snapshot: {
+            uid: string;
+            name: string;
+            email: string;
+            phone: string;
+            address: string;
+        };
+        created_at: string;
+        updated_at: string;
     };
+    message: string;
 }
 
-// ✅ API Hook
+// ✅ Updated API Hook that matches the actual response structure
 export const useGetRentalDataById = (rental_id: string) => {
     const getRentalDataById = async (): Promise<GetRentalByIdResponse> => {
+        if (!rental_id) {
+            throw new Error("Rental ID is required");
+        }
+
         const { data } = await axiosApiClient.get<GetRentalByIdResponse>(
             `/rental/${rental_id}`
         );
@@ -687,21 +646,23 @@ export const useGetRentalDataById = (rental_id: string) => {
     };
 
     const query = useQuery<GetRentalByIdResponse>({
-        queryKey: ["rentalData", rental_id], // include rental_id for cache separation
+        queryKey: ["rentalData", rental_id],
         queryFn: getRentalDataById,
-        enabled: !!rental_id, // only run if rental_id is provided
+        enabled: !!rental_id && rental_id.length > 0, // Only run if rental_id is valid
+        retry: false, // Don't retry on error - prevents potential cascade of errors
     });
+
+    // The rental data is directly in the data object
+    const rentalData = query.data?.data;
 
     return {
         ...query,
-        rental: query.data?.data.rental,
-        costume: query.data?.data.costume,
-        lender: query.data?.data.lender,
-        renter: query.data?.data.renter,
-        paymentSummary: query.data?.data.payment_summary,
-        paymentHistory: query.data?.data.payment_history,
+        rental: rentalData, // The complete rental object
+        costume: rentalData?.costume,
+        costumeSnapshot: rentalData?.costume_snapshot,
+        renterSnapshot: rentalData?.renter_snapshot,
+        lender: rentalData?.lender,
+        payments: rentalData?.payments,
+        paymentSummary: rentalData?.payment_summary,
     };
 };
-
-
-

@@ -1,32 +1,103 @@
 "use client"
-
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Eye, Loader2, Calendar, Package2 } from "lucide-react"
-import { Costume } from "@/lib/api/rentalApi"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Calendar, Eye, Loader2, Package2 } from "lucide-react"
+import Image from "next/image"
+import { useState } from "react"
+import { BorrowerRentalDetailsModal } from "./MyRentalsViewDataModal"
+
+// Define proper types based on the API response
+interface Costume {
+    id: string
+    name: string
+    brand: string
+    category: string
+    sizes: string
+    rental_price: string
+    security_deposit: string
+    main_images: {
+        back: string
+        front: string
+    }
+    description: string
+}
+
+interface CostumeSnapshot {
+    id: string
+    name: string
+    brand: string
+    sizes: string
+    category: string
+    lender_info: {
+        uid: string
+        name: string
+        email: string
+        phone: string
+        is_business: boolean
+    }
+    main_images: {
+        back: string
+        front: string
+    }
+    rental_price: string
+    security_deposit: string
+}
+
 interface Rental {
     id: string
     reference_code: string
     status: string
     total_amount: string
+    rental_amount: string
+    security_deposit: string
+    extension_fee: string
+    damage_cost: string
+    amount_paid: string
+    remaining_balance: string
+    payment_status: string
     start_date: string
     end_date: string
+    extended_days: number
     created_at: string
+    updated_at: string
+    pickup_location: string
+    delivery_method: string
+    special_instructions: string
+    damage_reported: boolean
+    initial_condition_notes: string | null
+    return_condition_notes: string | null
+    notes: string
     costume: Costume
-    payment_status: string
-    amount_paid: string
+    costume_snapshot: CostumeSnapshot
+    renter_snapshot: {
+        uid: string
+        name: string
+        email: string
+        phone: string
+        address: string
+    }
+    payments: {
+        status: string
+        amount: string
+        payment_type: string
+        created_at: string
+        updated_at: string
+    }[]
 }
 
 interface MyRentalsTableProps {
-    data: any[]
+    data: Rental[]
     isLoading: boolean
     error: any
 }
 
 export function MyRentalsTable({ data, isLoading, error }: MyRentalsTableProps) {
-    console.log("dat222a", data)
+    // State for the details modal
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+    const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null)
+
     const getStatusVariant = (status: string) => {
         switch (status.toLowerCase()) {
             case "confirmed":
@@ -58,9 +129,9 @@ export function MyRentalsTable({ data, isLoading, error }: MyRentalsTableProps) 
     }
 
     const formatCurrency = (amount: string) => {
-        return new Intl.NumberFormat("en-US", {
+        return new Intl.NumberFormat("en-PH", {
             style: "currency",
-            currency: "USD",
+            currency: "PHP",
         }).format(Number.parseFloat(amount))
     }
 
@@ -72,8 +143,24 @@ export function MyRentalsTable({ data, isLoading, error }: MyRentalsTableProps) 
         })
     }
 
+    // Calculate duration in days between start and end date
+    const calculateDurationDays = (startDate: string, endDate: string) => {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        const diffTime = Math.abs(end.getTime() - start.getTime())
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    }
+
+    // Updated function to open the details modal
     const handleViewDetails = (rentalId: string) => {
-        console.log("View details for rental:", rentalId)
+        setSelectedRentalId(rentalId)
+        setIsDetailsModalOpen(true)
+    }
+
+    // Function to close the modal
+    const handleCloseModal = () => {
+        setIsDetailsModalOpen(false)
+        setSelectedRentalId(null)
     }
 
     if (isLoading) {
@@ -129,99 +216,116 @@ export function MyRentalsTable({ data, isLoading, error }: MyRentalsTableProps) 
     }
 
     return (
-        <Card className="shadow-sm">
-            <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-muted/50">
-                                <TableHead className="font-semibold">Reference</TableHead>
-                                <TableHead className="font-semibold">Costume Details</TableHead>
-                                <TableHead className="font-semibold">Rental Period</TableHead>
-                                <TableHead className="font-semibold">Amount</TableHead>
-                                <TableHead className="font-semibold">Status</TableHead>
-                                <TableHead className="font-semibold">Payment</TableHead>
-                                <TableHead className="font-semibold text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {data.map((rental) => (
-                                <TableRow key={rental.id} className="hover:bg-muted/30 transition-colors">
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <p className="font-mono text-sm font-medium">{rental.reference_code}</p>
-                                            <p className="text-xs text-muted-foreground">Created {formatDate(rental.created_at)}</p>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <img
-                                                src={rental.costume.image || "/placeholder.svg?height=40&width=40"}
-                                                alt={rental.costume.name}
-                                                className="h-10 w-10 rounded-md object-cover border"
-                                            />
-                                            <div>
-                                                <p className="font-medium text-sm">{rental.costume.name}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <Badge variant="outline" className="text-xs px-2 py-0">
-                                                        {rental.costume.category}
-                                                    </Badge>
-                                                    {rental.costume.brand && (
-                                                        <span className="text-xs text-muted-foreground">{rental.costume.brand}</span>
-                                                    )}
+        <>
+            <Card className="shadow-sm">
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                    <TableHead className="font-semibold">Reference</TableHead>
+                                    <TableHead className="font-semibold">Costume Details</TableHead>
+                                    <TableHead className="font-semibold">Rental Period</TableHead>
+                                    <TableHead className="font-semibold">Amount</TableHead>
+                                    <TableHead className="font-semibold">Status</TableHead>
+                                    <TableHead className="font-semibold">Payment</TableHead>
+                                    <TableHead className="font-semibold text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {data.map((rental) => (
+                                    <TableRow key={rental.id} className="hover:bg-muted/30 transition-colors">
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                <p className="font-mono text-sm font-medium">{rental.reference_code}</p>
+                                                <p className="text-xs text-muted-foreground">Created {formatDate(rental.created_at)}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative h-10 w-10 overflow-hidden rounded-md border">
+                                                    <Image
+                                                        src={rental.costume_snapshot.main_images.front || "/placeholder.svg?height=40&width=40"}
+                                                        alt={rental.costume_snapshot.name}
+                                                        fill
+                                                        sizes="40px"
+                                                        className="object-cover"
+                                                        priority={false}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-sm">{rental.costume_snapshot.name}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Badge variant="outline" className="text-xs px-2 py-0">
+                                                            {rental.costume_snapshot.category}
+                                                        </Badge>
+                                                        {rental.costume_snapshot.brand && (
+                                                            <span className="text-xs text-muted-foreground">{rental.costume_snapshot.brand}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-1 text-sm">
-                                                <Calendar className="h-3 w-3 text-muted-foreground" />
-                                                <span className="font-medium">{formatDate(rental.start_date)}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-1 text-sm">
+                                                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                                                    <span className="font-medium">{formatDate(rental.start_date)}</span>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">to {formatDate(rental.end_date)}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    ({calculateDurationDays(rental.start_date, rental.end_date)} days)
+                                                    {rental.extended_days > 0 && ` + ${rental.extended_days} extended`}
+                                                </div>
                                             </div>
-                                            <div className="text-xs text-muted-foreground">to {formatDate(rental.end_date)}</div>
-                                            <div className="text-xs text-muted-foreground">({rental.duration_days} days)</div>
-                                        </div>
-                                    </TableCell>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                <p className="font-semibold text-sm">{formatCurrency(rental.total_amount)}</p>
+                                                <p className="text-xs text-muted-foreground">Base: {formatCurrency(rental.rental_amount)}</p>
+                                                <p className="text-xs text-muted-foreground">Deposit: {formatCurrency(rental.security_deposit)}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={getStatusVariant(rental.status)} className="capitalize">
+                                                {rental.status.replace("_", " ")}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={getPaymentStatusVariant(rental.payment_status)} className="capitalize">
+                                                {rental.payment_status}
+                                            </Badge>
+                                            {rental.amount_paid !== "0.00" && (
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Paid: {formatCurrency(rental.amount_paid)}
+                                                </p>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleViewDetails(rental.id)}
+                                                className="h-8 px-3 hover:bg-primary/10"
+                                            >
+                                                <Eye className="h-4 w-4 mr-2" />
+                                                Details
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
 
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <p className="font-semibold text-sm">{formatCurrency(rental.total_amount)}</p>
-                                            <p className="text-xs text-muted-foreground">Base: {formatCurrency(rental.rental_amount)}</p>
-                                        </div>
-                                    </TableCell>
-
-                                    <TableCell>
-                                        <Badge variant={getStatusVariant(rental.status)} className="capitalize">
-                                            {rental.status.replace("_", " ")}
-                                        </Badge>
-                                    </TableCell>
-
-                                    <TableCell>
-                                        <Badge variant={getPaymentStatusVariant(rental.payment_status)} className="capitalize">
-                                            {rental.payment_status}
-                                        </Badge>
-                                    </TableCell>
-
-                                    <TableCell className="text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleViewDetails(rental.id)}
-                                            className="h-8 px-3 hover:bg-primary/10"
-                                        >
-                                            <Eye className="h-4 w-4 mr-2" />
-                                            Details
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
+            {/* Rental Details Modal */}
+            <BorrowerRentalDetailsModal
+                isOpen={isDetailsModalOpen}
+                onClose={handleCloseModal}
+                rentalId={selectedRentalId}
+            />
+        </>
     )
 }

@@ -34,7 +34,7 @@ const STEP_CONFIG: Record<BookingStep, { title: string; description: string }> =
     summary: { title: "Summary", description: "Review & confirm" }
 }
 
-// Default form values
+// Default form values - FIXED to match schema
 const getDefaultFormValues = (costumeId: string = ""): PartialRentalBookingFormData => ({
     costume_id: costumeId,
     schedule: {
@@ -53,7 +53,7 @@ const getDefaultFormValues = (costumeId: string = ""): PartialRentalBookingFormD
     },
     payment_method: {
         type: "gcash",
-        payment_gcash_number: "+63",
+        gcash_number: "+63", // FIXED: Changed from payment_gcash_number
         refund_gcash_number: "+63",
         refund_account_name: ""
     },
@@ -217,7 +217,7 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
         }
     }, [isSubmitting, onClose])
 
-    // Step validation function
+    // FIXED Step validation function with correct field names
     const validateCurrentStep = useCallback(async (): Promise<boolean> => {
         const currentData = form.getValues()
         console.log("Validating step:", stepManager.currentStep, "with data:", currentData)
@@ -286,8 +286,8 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
                         return false
                     }
 
-                    // Check all payment fields
-                    const paymentFields = ['payment_gcash_number', 'refund_gcash_number', 'refund_account_name']
+                    // FIXED: Use correct field names from schema
+                    const paymentFields = ['gcash_number', 'refund_gcash_number', 'refund_account_name']
                     const missingPayment = paymentFields.filter(field => {
                         const value = currentData.payment_method![field as keyof typeof currentData.payment_method]
                         return !isNotEmpty(value)
@@ -301,10 +301,10 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
                         return false
                     }
 
-                    // Validate payment GCash number
-                    const paymentGcashNumber = currentData.payment_method.payment_gcash_number
-                    if (paymentGcashNumber && !/^\+63\d{10}$/.test(paymentGcashNumber)) {
-                        await form.trigger('payment_method.payment_gcash_number')
+                    // FIXED: Validate gcash_number (not payment_gcash_number)
+                    const gcashNumber = currentData.payment_method.gcash_number
+                    if (gcashNumber && !/^\+63\d{10}$/.test(gcashNumber)) {
+                        await form.trigger('payment_method.gcash_number')
                         return false
                     }
 
@@ -356,10 +356,12 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
         stepManager.goToPrevious()
     }
 
-    // Form submission handler with proper data preparation and validation
+    // FIXED Form submission handler with correct field mapping
     const handleSubmit: SubmitHandler<PartialRentalBookingFormData> = useCallback(async (formData) => {
         try {
             console.log("Form submit handler called with:", formData)
+
+            // FIXED: Map form data to match schema exactly
             const submissionData: RentalBookingFormData = {
                 costume_id: costumeId || formData.costume_id || "",
                 schedule: {
@@ -379,7 +381,8 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
                 },
                 payment_method: {
                     type: "gcash",
-                    payment_gcash_number: formData.payment_method?.payment_gcash_number || "",
+                    // FIXED: Use correct field names from schema
+                    gcash_number: formData.payment_method?.gcash_number || "",
                     refund_gcash_number: formData.payment_method?.refund_gcash_number || "",
                     refund_account_name: formData.payment_method?.refund_account_name || ""
                 },
@@ -389,13 +392,18 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
                     cancellation_policy: formData.agreements?.cancellation_policy || false
                 }
             }
+
             console.log("Prepared submission data:", submissionData)
+
             try {
+                // Validate final data against schema
                 rentalBookingSchema.parse(submissionData)
+                console.log("Final schema validation passed")
             } catch (validationError) {
                 console.error("Final validation failed:", validationError)
                 throw new Error("Please complete all required fields")
             }
+
             await submitBooking(submissionData)
         } catch (error) {
             console.error("Form submission error:", error)

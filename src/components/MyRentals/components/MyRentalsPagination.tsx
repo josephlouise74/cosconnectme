@@ -1,5 +1,4 @@
 "use client"
-
 import {
     Pagination,
     PaginationContent,
@@ -28,36 +27,72 @@ export function MyRentalsPagination({
     onPageChange,
     onPageSizeChange,
 }: MyRentalsPaginationProps) {
+    // Generate page numbers for pagination display
     const generatePageNumbers = () => {
-        const pages = []
-        const maxVisiblePages = 5
+        // If there are no pages, return empty array
+        if (totalPages <= 0) return [];
+
+        const pages = [];
+        const maxVisiblePages = 5;
 
         if (totalPages <= maxVisiblePages) {
+            // If we have fewer pages than the max visible, show all pages
             for (let i = 1; i <= totalPages; i++) {
-                pages.push(i)
+                pages.push(i);
             }
         } else {
+            // For many pages, show a subset with ellipses
             if (currentPage <= 3) {
-                pages.push(1, 2, 3, 4, "...", totalPages)
+                // Near the start
+                for (let i = 1; i <= 4; i++) {
+                    pages.push(i);
+                }
+                pages.push("...");
+                pages.push(totalPages);
             } else if (currentPage >= totalPages - 2) {
-                pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+                // Near the end
+                pages.push(1);
+                pages.push("...");
+                for (let i = totalPages - 3; i <= totalPages; i++) {
+                    pages.push(i);
+                }
             } else {
-                pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages)
+                // Somewhere in the middle
+                pages.push(1);
+                pages.push("...");
+                pages.push(currentPage - 1);
+                pages.push(currentPage);
+                pages.push(currentPage + 1);
+                pages.push("...");
+                pages.push(totalPages);
             }
         }
 
-        return pages
+        return pages;
+    };
+
+    // Calculate the range of items being displayed
+    const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const endItem = Math.min(currentPage * pageSize, totalItems);
+
+    // Determine if previous/next buttons should be disabled
+    const isPreviousDisabled = currentPage === 1;
+    const isNextDisabled = currentPage === totalPages || totalPages === 0;
+
+    // Only show pagination if there are items
+    if (totalItems === 0) {
+        return null;
     }
 
-    const startItem = (currentPage - 1) * pageSize + 1
-    const endItem = Math.min(currentPage * pageSize, totalItems)
-
     return (
-        <div className="flex items-center justify-between px-2">
-            <div className="flex items-center space-x-6 lg:space-x-8">
+        <div className="flex flex-col sm:flex-row items-center justify-between px-2 py-4 gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                 <div className="flex items-center space-x-2">
                     <p className="text-sm font-medium">Rows per page</p>
-                    <Select value={pageSize.toString()} onValueChange={(value) => onPageSizeChange(Number(value))}>
+                    <Select
+                        value={pageSize.toString()}
+                        onValueChange={(value) => onPageSizeChange(Number(value))}
+                    >
                         <SelectTrigger className="h-8 w-[70px]">
                             <SelectValue />
                         </SelectTrigger>
@@ -69,45 +104,52 @@ export function MyRentalsPagination({
                         </SelectContent>
                     </Select>
                 </div>
-
-                <div className="text-sm text-muted-foreground">
-                    Showing {startItem} to {endItem} of {totalItems} results
+                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                    {totalItems > 0 ? (
+                        <>Showing {startItem} to {endItem} of {totalItems} results</>
+                    ) : (
+                        <>No results</>
+                    )}
                 </div>
             </div>
 
-            <Pagination>
-                <PaginationContent>
-                    <PaginationItem>
-                        <PaginationPrevious
-                            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                    </PaginationItem>
-
-                    {generatePageNumbers().map((page, index) => (
-                        <PaginationItem key={index}>
-                            {page === "..." ? (
-                                <PaginationEllipsis />
-                            ) : (
-                                <PaginationLink
-                                    onClick={() => onPageChange(page as number)}
-                                    isActive={currentPage === page}
-                                    className="cursor-pointer"
-                                >
-                                    {page}
-                                </PaginationLink>
-                            )}
+            {totalPages > 1 && (
+                <Pagination>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious
+                                onClick={() => !isPreviousDisabled && onPageChange(currentPage - 1)}
+                                className={isPreviousDisabled ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                aria-disabled={isPreviousDisabled}
+                            />
                         </PaginationItem>
-                    ))}
 
-                    <PaginationItem>
-                        <PaginationNext
-                            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                    </PaginationItem>
-                </PaginationContent>
-            </Pagination>
+                        {generatePageNumbers().map((page, index) => (
+                            <PaginationItem key={index} className="hidden sm:inline-block">
+                                {page === "..." ? (
+                                    <PaginationEllipsis />
+                                ) : (
+                                    <PaginationLink
+                                        onClick={() => onPageChange(page as number)}
+                                        isActive={currentPage === page}
+                                        className="cursor-pointer"
+                                    >
+                                        {page}
+                                    </PaginationLink>
+                                )}
+                            </PaginationItem>
+                        ))}
+
+                        <PaginationItem>
+                            <PaginationNext
+                                onClick={() => !isNextDisabled && onPageChange(currentPage + 1)}
+                                className={isNextDisabled ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                aria-disabled={isNextDisabled}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            )}
         </div>
-    )
-}
+    );
+}   

@@ -49,14 +49,17 @@ export const PaymentMethodForm: React.FC = () => {
                         <CheckCircle className="h-5 w-5 text-blue-600" />
                     </div>
 
-                    {/* Payment GCash Number (Optional) */}
+                    {/* Payment GCash Number - Updated field name to match schema */}
                     <FormField
                         control={control}
-                        name="payment_method.payment_gcash_number"
+                        name="payment_method.gcash_number"
                         render={({ field }) => {
                             return (
                                 <FormItem>
-                                    <FormLabel>Payment GCash Number</FormLabel>
+                                    <FormLabel className="flex items-center gap-1">
+                                        Payment GCash Number
+                                        <span className="text-red-500">*</span>
+                                    </FormLabel>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <span className="text-gray-500 sm:text-sm">+63</span>
@@ -68,11 +71,12 @@ export const PaymentMethodForm: React.FC = () => {
                                             value={field.value ? field.value.replace('+63', '') : ''}
                                             onChange={(e) => handleGCashNumberChange(e, field.onChange)}
                                             maxLength={12}
+                                            required
                                         />
                                     </div>
                                     <FormMessage />
                                     <p className="text-sm text-gray-500 mt-1">
-                                        Enter the GCash number you'll use to make the payment (can be a store/friend's GCash)
+                                        Enter the GCash number you'll use to make the payment
                                     </p>
                                 </FormItem>
                             );

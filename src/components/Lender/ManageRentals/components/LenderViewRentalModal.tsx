@@ -1,9 +1,5 @@
 "use client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -14,6 +10,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle
 } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
@@ -24,7 +24,6 @@ import {
     Check,
     Clock,
     CreditCard,
-    ExternalLink,
     Loader2,
     Mail,
     Package,
@@ -58,20 +57,28 @@ export function LenderRentalDetailsModal({
     const [showRejectDialog, setShowRejectDialog] = useState(false)
     const [rejectMessage, setRejectMessage] = useState("")
 
-    // Data fetching - only for display
-    const { data, isLoading: loadingDetails, error } = useGetRentalDataById(rentalId || "")
+    // Data fetching - using the updated API hook
+    const {
+
+        isLoading: loadingDetails,
+        error,
+        rental,
+        costumeSnapshot,
+        renterSnapshot,
+        payments
+    } = useGetRentalDataById(rentalId || "")
 
     if (!rentalId) return null
 
-    // Extract data
-    const rental = data?.data?.rental
-    const renter = data?.data?.renter
-    const paymentSummary = data?.data?.payment_summary
-    const paymentHistory = data?.data?.payment_history || []
-    const metadata = data?.data?.metadata
+    // Calculate payment summary from the rental data
+    const paymentSummary = rental ? {
+        total_paid: rental.amount_paid,
+        pending_amount: rental.remaining_balance,
+        is_fully_paid: rental.payment_status === 'paid' || Number(rental.remaining_balance) === 0
+    } : null
 
-    // UI state
-    const canUpdateStatus = metadata?.can_cancel && rental?.status === "confirmed"
+    // UI state - simplified since we don't have metadata.can_cancel
+    const canUpdateStatus = rental?.status === "pending" || rental?.status === "confirmed"
 
     // Handlers - delegate to parent props
     const handleAccept = async () => {
@@ -98,6 +105,7 @@ export function LenderRentalDetailsModal({
     // Utility functions
     const getStatusColor = (status: string) => {
         const colors = {
+            pending: 'bg-yellow-100 text-yellow-800',
             confirmed: 'bg-blue-100 text-blue-800',
             active: 'bg-green-100 text-green-800',
             completed: 'bg-gray-100 text-gray-800',
@@ -116,8 +124,23 @@ export function LenderRentalDetailsModal({
     }
 
     const formatCurrency = (amount: string | number) => {
-        return `₱${amount || '0'}`
+        return `₱${Number(amount).toLocaleString()}`
     }
+
+    // Calculate rental duration
+    const calculateDuration = (startDate: string, endDate: string) => {
+        if (!startDate || !endDate) return 0
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        const diffTime = Math.abs(end.getTime() - start.getTime())
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    }
+
+    const duration = rental ? calculateDuration(rental.start_date, rental.end_date) : 0
+
+    // Check if rental is overdue (simplified logic)
+    const isOverdue = rental && new Date(rental.end_date) < new Date() && rental.status === 'active'
+    const daysOverdue = isOverdue ? Math.ceil((new Date().getTime() - new Date(rental.end_date).getTime()) / (1000 * 60 * 60 * 24)) : 0
 
     return (
         <>
@@ -163,7 +186,7 @@ export function LenderRentalDetailsModal({
                                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                                             <div className="space-y-2 min-w-0">
                                                 <h3 className="text-xl font-semibold truncate">
-                                                    {rental.costume_snapshot?.name}
+                                                    {costumeSnapshot?.name || rental.costume?.name}
                                                 </h3>
                                                 <p className="text-sm text-muted-foreground">
                                                     Reference: <span className="font-mono">{rental.reference_code}</span>
@@ -171,10 +194,10 @@ export function LenderRentalDetailsModal({
                                                 <div className="flex items-center gap-2 text-sm flex-wrap">
                                                     <Calendar className="h-4 w-4 flex-shrink-0" />
                                                     <span className="truncate">
-                                                        {rental.start_date_formatted} → {rental.end_date_formatted}
+                                                        {formatDate(rental.start_date)} → {formatDate(rental.end_date)}
                                                     </span>
                                                     <Badge variant="outline" className="flex-shrink-0">
-                                                        {rental.duration_days} days
+                                                        {duration} days
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -185,9 +208,9 @@ export function LenderRentalDetailsModal({
                                                 >
                                                     {paymentSummary?.is_fully_paid ? "✓ Fully Paid" : "⚠ Payment Pending"}
                                                 </Badge>
-                                                {rental.is_overdue && (
+                                                {isOverdue && (
                                                     <Badge variant="destructive" className="w-fit">
-                                                        Overdue by {rental.days_overdue} days
+                                                        Overdue by {daysOverdue} days
                                                     </Badge>
                                                 )}
                                             </div>
@@ -249,26 +272,18 @@ export function LenderRentalDetailsModal({
                                             <div className="flex items-start gap-4">
                                                 <div className="relative h-16 w-16 rounded-full overflow-hidden">
                                                     <img
-                                                        src={renter?.profile_image || "/images/default-avatar.jpg"}
-                                                        alt={renter?.display_name || "Renter"}
+                                                        src="/images/default-avatar.jpg"
+                                                        alt={renterSnapshot?.name || "Renter"}
                                                         className="h-full w-full object-cover"
                                                     />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-semibold text-base truncate">
-                                                        {renter?.display_name || rental.renter_snapshot?.name}
+                                                        {renterSnapshot?.name}
                                                     </p>
                                                     <p className="text-sm text-muted-foreground truncate">
-                                                        @{renter?.username || "user"}
+                                                        ID: {renterSnapshot?.uid}
                                                     </p>
-                                                    {renter?.status && (
-                                                        <Badge
-                                                            variant={renter.status === 'active' ? 'default' : 'secondary'}
-                                                            className="mt-1"
-                                                        >
-                                                            {renter.status}
-                                                        </Badge>
-                                                    )}
                                                 </div>
                                             </div>
                                             <Separator />
@@ -276,14 +291,22 @@ export function LenderRentalDetailsModal({
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                                     <span className="text-sm truncate">
-                                                        {renter?.email || rental.renter_snapshot?.email}
+                                                        {renterSnapshot?.email}
                                                     </span>
                                                 </div>
-                                                {(renter?.phone_number || rental.renter_snapshot?.phone) && (
+                                                {renterSnapshot?.phone && (
                                                     <div className="flex items-center gap-2">
                                                         <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                                         <span className="text-sm">
-                                                            {renter?.phone_number || rental.renter_snapshot?.phone}
+                                                            {renterSnapshot.phone}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {renterSnapshot?.address && (
+                                                    <div className="flex items-start gap-2">
+                                                        <Truck className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                                        <span className="text-sm">
+                                                            {renterSnapshot.address}
                                                         </span>
                                                     </div>
                                                 )}
@@ -302,34 +325,34 @@ export function LenderRentalDetailsModal({
                                         <CardContent className="space-y-4">
                                             <div className="flex gap-4">
                                                 <div className="flex gap-2 flex-shrink-0">
-                                                    {rental.costume_snapshot?.main_images?.front && (
+                                                    {(costumeSnapshot?.main_images?.front || rental.costume?.main_images?.front) && (
                                                         <img
-                                                            src={rental.costume_snapshot.main_images.front}
-                                                            alt={`${rental.costume_snapshot?.name} - front`}
+                                                            src={costumeSnapshot?.main_images?.front || rental.costume?.main_images?.front}
+                                                            alt={`${costumeSnapshot?.name || rental.costume?.name} - front`}
                                                             className="w-20 h-20 object-cover rounded-lg border"
                                                         />
                                                     )}
-                                                    {rental.costume_snapshot?.main_images?.back && (
+                                                    {(costumeSnapshot?.main_images?.back || rental.costume?.main_images?.back) && (
                                                         <img
-                                                            src={rental.costume_snapshot.main_images.back}
-                                                            alt={`${rental.costume_snapshot?.name} - back`}
+                                                            src={costumeSnapshot?.main_images?.back || rental.costume?.main_images?.back}
+                                                            alt={`${costumeSnapshot?.name || rental.costume?.name} - back`}
                                                             className="w-20 h-20 object-cover rounded-lg border"
                                                         />
                                                     )}
                                                 </div>
                                                 <div className="flex-1 space-y-2 min-w-0">
                                                     <h4 className="font-semibold truncate">
-                                                        {rental.costume_snapshot?.name}
+                                                        {costumeSnapshot?.name || rental.costume?.name}
                                                     </h4>
                                                     <div className="text-sm space-y-1">
-                                                        {rental.costume_snapshot?.brand && (
-                                                            <p><span className="text-muted-foreground">Brand:</span> {rental.costume_snapshot.brand}</p>
+                                                        {(costumeSnapshot?.brand || rental.costume?.brand) && (
+                                                            <p><span className="text-muted-foreground">Brand:</span> {costumeSnapshot?.brand || rental.costume?.brand}</p>
                                                         )}
-                                                        {rental.costume_snapshot?.category && (
-                                                            <p><span className="text-muted-foreground">Category:</span> {rental.costume_snapshot.category}</p>
+                                                        {(costumeSnapshot?.category || rental.costume?.category) && (
+                                                            <p><span className="text-muted-foreground">Category:</span> {costumeSnapshot?.category || rental.costume?.category}</p>
                                                         )}
-                                                        {rental.costume_snapshot?.sizes && (
-                                                            <p><span className="text-muted-foreground">Sizes:</span> {rental.costume_snapshot.sizes}</p>
+                                                        {(costumeSnapshot?.sizes || rental.costume?.sizes) && (
+                                                            <p><span className="text-muted-foreground">Sizes:</span> {costumeSnapshot?.sizes || rental.costume?.sizes}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -339,13 +362,13 @@ export function LenderRentalDetailsModal({
                                                 <div>
                                                     <span className="text-muted-foreground">Rental Price:</span>
                                                     <p className="font-semibold">
-                                                        {formatCurrency(rental.costume_snapshot?.rental_price)}/day
+                                                        {formatCurrency(costumeSnapshot?.rental_price || rental.costume?.rental_price || 0)}/day
                                                     </p>
                                                 </div>
                                                 <div>
                                                     <span className="text-muted-foreground">Security Deposit:</span>
                                                     <p className="font-semibold">
-                                                        {formatCurrency(rental.costume_snapshot?.security_deposit)}
+                                                        {formatCurrency(costumeSnapshot?.security_deposit || rental.costume?.security_deposit || 0)}
                                                     </p>
                                                 </div>
                                             </div>
@@ -368,26 +391,54 @@ export function LenderRentalDetailsModal({
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="text-sm text-muted-foreground">Amount Paid:</span>
-                                                <span className="text-sm font-medium text-green-600">
-                                                    {formatCurrency(paymentSummary?.total_paid as string)}
+                                                <span className="text-sm text-muted-foreground">Rental Amount:</span>
+                                                <span className="text-sm font-medium">
+                                                    {formatCurrency(rental.rental_amount)}
                                                 </span>
                                             </div>
-                                            {Number(paymentSummary?.pending_amount) > 0 && (
+                                            <div className="flex justify-between">
+                                                <span className="text-sm text-muted-foreground">Security Deposit:</span>
+                                                <span className="text-sm font-medium">
+                                                    {formatCurrency(rental.security_deposit)}
+                                                </span>
+                                            </div>
+                                            {Number(rental.extension_fee) > 0 && (
                                                 <div className="flex justify-between">
-                                                    <span className="text-sm text-muted-foreground">Pending:</span>
+                                                    <span className="text-sm text-muted-foreground">Extension Fee:</span>
                                                     <span className="text-sm font-medium text-orange-600">
-                                                        {formatCurrency(paymentSummary?.pending_amount as string)}
+                                                        {formatCurrency(rental.extension_fee)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {Number(rental.damage_cost) > 0 && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm text-muted-foreground">Damage Cost:</span>
+                                                    <span className="text-sm font-medium text-red-600">
+                                                        {formatCurrency(rental.damage_cost)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between">
+                                                <span className="text-sm text-muted-foreground">Amount Paid:</span>
+                                                <span className="text-sm font-medium text-green-600">
+                                                    {formatCurrency(rental.amount_paid)}
+                                                </span>
+                                            </div>
+                                            {Number(rental.remaining_balance) > 0 && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm text-muted-foreground">Remaining Balance:</span>
+                                                    <span className="text-sm font-medium text-orange-600">
+                                                        {formatCurrency(rental.remaining_balance)}
                                                     </span>
                                                 </div>
                                             )}
                                             <Separator />
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm font-medium">Status:</span>
+                                                <span className="text-sm font-medium">Payment Status:</span>
                                                 <Badge
-                                                    variant={paymentSummary?.is_fully_paid ? "default" : "destructive"}
+                                                    variant={rental.payment_status === 'paid' ? "default" : "destructive"}
                                                 >
-                                                    {paymentSummary?.is_fully_paid ? "Fully Paid" : "Payment Required"}
+                                                    {rental.payment_status.toUpperCase()}
                                                 </Badge>
                                             </div>
                                         </CardContent>
@@ -404,15 +455,15 @@ export function LenderRentalDetailsModal({
                                         <CardContent className="space-y-3">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-muted-foreground">Start Date:</span>
-                                                <span className="text-sm font-medium">{rental.start_date_formatted}</span>
+                                                <span className="text-sm font-medium">{formatDate(rental.start_date)}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-muted-foreground">End Date:</span>
-                                                <span className="text-sm font-medium">{rental.end_date_formatted}</span>
+                                                <span className="text-sm font-medium">{formatDate(rental.end_date)}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-muted-foreground">Duration:</span>
-                                                <Badge variant="outline">{rental.duration_days} days</Badge>
+                                                <Badge variant="outline">{duration} days</Badge>
                                             </div>
                                             {rental.extended_days > 0 && (
                                                 <>
@@ -423,17 +474,21 @@ export function LenderRentalDetailsModal({
                                                     </div>
                                                 </>
                                             )}
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-muted-foreground">Delivery Method:</span>
+                                                <span className="text-sm font-medium">{rental.delivery_method || "Not specified"}</span>
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 </div>
 
                                 {/* Additional Information */}
-                                {(rental.pickup_location || rental.special_instructions || rental.notes) && (
+                                {(rental.pickup_location || rental.special_instructions || rental.notes || rental.damage_reported) && (
                                     <Card>
                                         <CardHeader>
                                             <CardTitle className="flex items-center gap-2">
                                                 <Truck className="h-4 w-4" />
-                                                Delivery & Instructions
+                                                Additional Information
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
@@ -459,26 +514,44 @@ export function LenderRentalDetailsModal({
                                                     </div>
                                                 </div>
                                             )}
+                                            {rental.damage_reported && (
+                                                <div>
+                                                    <Alert variant="destructive">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        <AlertDescription>
+                                                            <div className="space-y-2">
+                                                                <p className="font-medium">Damage Reported</p>
+                                                                {rental.initial_condition_notes && (
+                                                                    <p><span className="font-medium">Initial Condition:</span> {rental.initial_condition_notes}</p>
+                                                                )}
+                                                                {rental.return_condition_notes && (
+                                                                    <p><span className="font-medium">Return Condition:</span> {rental.return_condition_notes}</p>
+                                                                )}
+                                                            </div>
+                                                        </AlertDescription>
+                                                    </Alert>
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 )}
 
                                 {/* Payment History */}
-                                {paymentHistory.length > 0 && (
+                                {payments && payments.length > 0 && (
                                     <Card>
                                         <CardHeader>
                                             <CardTitle className="flex items-center gap-2">
                                                 <Receipt className="h-4 w-4" />
-                                                Payment History ({paymentHistory.length})
+                                                Payment History ({payments.length})
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent>
                                             <div className="space-y-3">
-                                                {paymentHistory.map((payment, index) => (
-                                                    <div key={`payment-${payment.id}-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
+                                                {payments.map((payment, index) => (
+                                                    <div key={`payment-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="font-medium text-sm">{payment.description}</span>
+                                                                <span className="font-medium text-sm">{payment.payment_type}</span>
                                                                 <Badge
                                                                     variant={payment.status === 'paid' ? 'default' : 'secondary'}
                                                                     className="text-xs"
@@ -487,21 +560,11 @@ export function LenderRentalDetailsModal({
                                                                 </Badge>
                                                             </div>
                                                             <p className="text-xs text-muted-foreground mt-1">
-                                                                {payment.created_at_formatted} • {payment.payment_method}
+                                                                {formatDate(payment.created_at)} • Updated: {formatDate(payment.updated_at)}
                                                             </p>
                                                         </div>
-                                                        <div className="text-right flex flex-col items-end flex-shrink-0">
+                                                        <div className="text-right flex-shrink-0">
                                                             <span className="font-semibold">{formatCurrency(payment.amount)}</span>
-                                                            {payment.checkout_url && (
-                                                                <a
-                                                                    href={payment.checkout_url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-xs flex items-center text-blue-600 hover:underline mt-1"
-                                                                >
-                                                                    View <ExternalLink className="ml-1 h-3 w-3" />
-                                                                </a>
-                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
