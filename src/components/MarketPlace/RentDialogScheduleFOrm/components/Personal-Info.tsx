@@ -1,5 +1,4 @@
 "use client"
-
 import type React from "react"
 import { useFormContext } from "react-hook-form"
 import { User, Phone, Mail, Calendar, AlertCircle } from "lucide-react"
@@ -9,6 +8,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useEffect } from "react"
 import type { RentalBookingFormData } from "./type"
+import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
 
 export const PersonalDetailsForm: React.FC = () => {
     const {
@@ -16,8 +16,32 @@ export const PersonalDetailsForm: React.FC = () => {
         formState: { errors },
         watch,
         trigger,
-        getValues
+        getValues,
+        setValue
     } = useFormContext<RentalBookingFormData>()
+
+    const { userData } = useSupabaseAuth()
+
+    // Set default values from userData when component mounts
+    useEffect(() => {
+        if (userData) {
+            // Set email from userData
+            setValue("personal_details.email", userData.email || "");
+
+            // Set name fields if available
+            if (userData.personal_info) {
+                setValue("personal_details.first_name", userData.personal_info.first_name || "");
+                setValue("personal_details.last_name", userData.personal_info.last_name || "");
+
+                // Set phone number if available
+                if (userData.personal_info.phone_number) {
+                    setValue("personal_details.phone_number", userData.personal_info.phone_number);
+                }
+
+
+            }
+        }
+    }, [userData, setValue]);
 
     // Watch all personal details fields
     const personalDetails = watch("personal_details")
@@ -61,10 +85,8 @@ export const PersonalDetailsForm: React.FC = () => {
     // Format phone number as user types
     const formatPhoneNumber = (value: string) => {
         if (!value) return "+63"
-
         // Remove all non-digits except the leading +
         let cleaned = value.replace(/[^\d+]/g, "")
-
         // Ensure it starts with +63
         if (!cleaned.startsWith("+63")) {
             if (cleaned.startsWith("63")) {
@@ -77,16 +99,13 @@ export const PersonalDetailsForm: React.FC = () => {
                 cleaned = "+63"
             }
         }
-
         // Limit to +63 plus 10 digits
         if (cleaned.length > 13) {
             cleaned = cleaned.substring(0, 13)
         }
-
         // Format display: +63 XXX XXX XXXX
         const match = cleaned.match(/^\+63(\d{0,3})(\d{0,3})(\d{0,4})/)
         if (!match) return "+63"
-
         const [, part1, part2, part3] = match
         if (part3) return `+63 ${part1} ${part2} ${part3}`
         if (part2) return `+63 ${part1} ${part2}`
@@ -170,7 +189,6 @@ export const PersonalDetailsForm: React.FC = () => {
                             )}
                         />
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={control}
@@ -187,15 +205,12 @@ export const PersonalDetailsForm: React.FC = () => {
                                             placeholder="your.email@example.com"
                                             {...field}
                                             value={field.value || ""}
-                                            onChange={(e) => {
-                                                const value = e.target.value.trim().toLowerCase()
-                                                field.onChange(value)
-                                                // Trigger validation for this field
-                                                trigger("personal_details.email")
-                                            }}
+                                            disabled={true} // Make email field disabled
+                                            className="bg-gray-50 cursor-not-allowed" // Visual indication that it's disabled
                                         />
                                     </FormControl>
                                     <FormMessage />
+                                    <p className="text-xs text-gray-500">Email cannot be changed</p>
                                 </FormItem>
                             )}
                         />
@@ -228,7 +243,6 @@ export const PersonalDetailsForm: React.FC = () => {
                             )}
                         />
                     </div>
-
                     <FormField
                         control={control}
                         name="personal_details.date_of_birth"

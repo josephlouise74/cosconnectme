@@ -1,19 +1,20 @@
 "use client"
-
-import { useState } from "react"
-import { format } from "date-fns"
-import { Eye, Calendar, Package, MoreHorizontal, XCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { type LenderRentalRequest, useUpdateRentalRequestStatus } from "@/lib/api/rentalApi"
-
-import { LenderRentalDetailsModal } from "./LenderViewRentalModal"
+import {
+    type LenderRentalRequest,
+    useUpdateRentalRequestStatus,
+} from "@/lib/api/rentalApi"
+import { format } from "date-fns"
+import { Calendar, Eye, MoreHorizontal, Package, XCircle } from "lucide-react"
+import { useState } from "react"
 import { RentalRejectionsTable } from "./LenderRentalRejectionsTable"
+import { LenderRentalDetailsModal } from "./LenderViewRentalModal"
 
 interface LenderRentalsTableProps {
     data: LenderRentalRequest[]
@@ -28,8 +29,14 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
     const [selectedRejectionId, setSelectedRejectionId] = useState<string | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
 
-    const { updateStatusAsync, isLoading: isUpdatingStatus, error: updateError } = useUpdateRentalRequestStatus()
+    // Use the API hook for status updates
+    const {
+        updateStatusAsync,
+        isLoading: isUpdatingStatus,
+        error: updateError
+    } = useUpdateRentalRequestStatus()
 
+    // Modal control functions
     const handleViewDetails = (rentalId: string) => {
         setSelectedRentalId(rentalId)
         setSelectedRejectionId(null)
@@ -44,60 +51,143 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
 
     const handleCloseModal = () => {
         setIsModalOpen(false)
-        setSelectedRentalId(null)
-        setSelectedRejectionId(null)
+        setTimeout(() => {
+            setSelectedRentalId(null)
+            setSelectedRejectionId(null)
+        }, 300)
     }
 
+    // Rental status update functions
     const handleApprove = async (rentalId: string) => {
         try {
+            if (!rentalId || !lenderId) {
+                console.error("Missing required fields for approve action")
+                return
+            }
             await updateStatusAsync({
                 rental_id: rentalId,
                 lender_id: lenderId,
-                status: "accept",
+                status: "accept"
             })
-
             if (onRefresh) {
                 onRefresh()
+                handleCloseModal() // Close modal after successful action
             }
         } catch (error) {
             console.error("Failed to approve rental:", error)
         }
     }
 
-    const handleReject = async (rentalId: string, rejectMessage?: string) => {
+    const handleReject = async (rentalId: string, rejectMessage: string) => {
         try {
+            if (!rentalId || !lenderId) {
+                console.error("Missing required fields for reject action")
+                return
+            }
+            // Create payload according to API requirements
             await updateStatusAsync({
                 rental_id: rentalId,
                 lender_id: lenderId,
                 status: "reject",
-                reject_message: rejectMessage || "",
+                reject_message: rejectMessage
             })
-
             if (onRefresh) {
                 onRefresh()
+                handleCloseModal() // Close modal after successful action
             }
         } catch (error) {
             console.error("Failed to reject rental:", error)
         }
     }
 
-    const canManageRental = (request: LenderRentalRequest) => {
-        return request.status === "pending"
+    const handleMarkAsDelivered = async (rentalId: string) => {
+        try {
+            if (!rentalId || !lenderId) {
+                console.error("Missing required fields for deliver action")
+                return
+            }
+            await updateStatusAsync({
+                rental_id: rentalId,
+                lender_id: lenderId,
+                status: "delivered"
+            })
+            if (onRefresh) {
+                onRefresh()
+                handleCloseModal()
+            }
+        } catch (error) {
+            console.error("Failed to mark rental as delivered:", error)
+        }
     }
+
+    const handleMarkAsReturned = async (rentalId: string, returnNotes: string = "") => {
+        try {
+            if (!rentalId || !lenderId) {
+                console.error("Missing required fields for return action")
+                return
+            }
+            await updateStatusAsync({
+                rental_id: rentalId,
+                lender_id: lenderId,
+                status: "returned",
+                return_notes: returnNotes
+            })
+            if (onRefresh) {
+                onRefresh()
+                handleCloseModal()
+            }
+        } catch (error) {
+            console.error("Failed to mark rental as returned:", error)
+        }
+    }
+
+    const handleReportDamage = async (rentalId: string, damageDetails: { cost: number; description: string }) => {
+        try {
+            if (!rentalId || !lenderId) {
+                console.error("Missing required fields for damage report")
+                return
+            }
+            const prepareData = {
+                rental_id: rentalId,
+                lender_id: lenderId,
+                status: "returned",
+                return_notes: `DAMAGED: ${damageDetails.description}. Estimated cost: ₱${damageDetails.cost}`
+            }
+
+
+            console.log("prepareData", prepareData)
+            // For now, we'll use the returned status with notes about the damage
+            await updateStatusAsync({
+                rental_id: rentalId,
+                lender_id: lenderId,
+                status: "returned",
+                return_notes: `DAMAGED: ${damageDetails.description}. Estimated cost: ₱${damageDetails.cost}`
+            })
+            if (onRefresh) {
+                onRefresh()
+                handleCloseModal()
+            }
+        } catch (error) {
+            console.error("Failed to report damage:", error)
+        }
+    }
+
+    // Utility functions
+    const canManageRental = (request: LenderRentalRequest) => request.status === "confirmed"
 
     const getStatusBadge = (status: string) => {
         const statusConfig = {
             pending: { variant: "secondary" as const, color: "bg-yellow-100 text-yellow-800" },
             confirmed: { variant: "default" as const, color: "bg-blue-100 text-blue-800" },
-            accepted: { variant: "default" as const, color: "bg-blue-100 text-blue-800" },
-            active: { variant: "default" as const, color: "bg-green-100 text-green-800" },
+            accepted: { variant: "default" as const, color: "bg-green-100 text-green-800" },
+            delivered: { variant: "default" as const, color: "bg-green-100 text-green-800" },
+            returned: { variant: "default" as const, color: "bg-purple-100 text-purple-800" },
             completed: { variant: "outline" as const, color: "bg-gray-100 text-gray-800" },
             cancelled: { variant: "destructive" as const, color: "bg-red-100 text-red-800" },
             rejected: { variant: "destructive" as const, color: "bg-red-100 text-red-800" },
+            overdue: { variant: "destructive" as const, color: "bg-orange-100 text-orange-800" },
         }
-
         const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
-
         return (
             <Badge variant={config.variant} className={config.color}>
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -111,9 +201,7 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
             partially_paid: { variant: "secondary" as const, label: "Partial", color: "bg-orange-100 text-orange-800" },
             fully_paid: { variant: "default" as const, label: "Paid", color: "bg-green-100 text-green-800" },
         }
-
         const config = paymentConfig[status as keyof typeof paymentConfig] || paymentConfig.unpaid
-
         return (
             <Badge variant={config.variant} className={config.color}>
                 {config.label}
@@ -126,6 +214,7 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
         return `₱${numAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
     }
 
+    // Render table based on loading state
     const renderActiveRentalsTable = () => {
         if (isLoading) {
             return (
@@ -204,7 +293,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
                                                 </p>
                                             </div>
                                         </TableCell>
-
                                         <TableCell className="py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-10 w-10 border-2 border-muted">
@@ -218,7 +306,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
                                                 </div>
                                             </div>
                                         </TableCell>
-
                                         <TableCell className="py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="relative">
@@ -239,7 +326,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
                                                 </div>
                                             </div>
                                         </TableCell>
-
                                         <TableCell className="py-4">
                                             <div className="space-y-1">
                                                 <div className="flex items-center gap-1 text-sm">
@@ -254,16 +340,13 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
                                                 </p>
                                             </div>
                                         </TableCell>
-
                                         <TableCell className="py-4">
                                             <div className="space-y-1">
                                                 <p className="font-semibold text-sm">{formatCurrency(request.total_amount)}</p>
                                                 <p className="text-xs text-muted-foreground">Rental: {formatCurrency(request.rental_amount)}</p>
                                             </div>
                                         </TableCell>
-
                                         <TableCell className="py-4">{getPaymentStatusBadge(request.payment_summary.status)}</TableCell>
-
                                         <TableCell className="py-4">
                                             <div className="flex items-center gap-2">
                                                 {getStatusBadge(request.status)}
@@ -272,7 +355,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
                                                 )}
                                             </div>
                                         </TableCell>
-
                                         <TableCell className="py-4 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -325,36 +407,24 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
                         Rejected Rentals
                     </TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="active" className="mt-6">
                     {renderActiveRentalsTable()}
                 </TabsContent>
-
                 <TabsContent value="rejected" className="mt-6">
                     <RentalRejectionsTable onViewDetails={handleViewRejectionDetails} />
                 </TabsContent>
             </Tabs>
-
             {/* Rental Details Modal */}
-            {selectedRentalId && (
+            {(selectedRentalId || selectedRejectionId) && (
                 <LenderRentalDetailsModal
                     isOpen={isModalOpen}
                     onClose={handleCloseModal}
-                    rentalId={selectedRentalId}
+                    rentalId={selectedRentalId || selectedRejectionId}
                     onApprove={handleApprove}
                     onReject={handleReject}
-                    isUpdating={isUpdatingStatus}
-                    updateError={updateError}
-                />
-            )}
-
-            {selectedRejectionId && (
-                <LenderRentalDetailsModal
-                    isOpen={isModalOpen}
-                    onClose={handleCloseModal}
-                    rentalId={selectedRejectionId}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
+                    onMarkAsDelivered={handleMarkAsDelivered}
+                    onMarkAsReturned={handleMarkAsReturned}
+                    onReportDamage={handleReportDamage}
                     isUpdating={isUpdatingStatus}
                     updateError={updateError}
                 />

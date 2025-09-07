@@ -100,13 +100,14 @@ export const useGetRentalRejections = (userId: string) => {
 
 
 // Types
-type RentalStatus = "accept" | "reject";
+type RentalStatus = "accept" | "reject" | "delivered" | "returned";
 
 interface UpdateRentalStatusPayload {
     rental_id: string;
     lender_id: string;
     status: RentalStatus;
     reject_message?: string;
+    return_notes?: string;
 }
 
 interface UpdateRentalStatusError {
@@ -119,7 +120,6 @@ interface UpdateRentalStatusError {
 // Main hook for updating rental request status
 export const useUpdateRentalRequestStatus = () => {
     const queryClient = useQueryClient();
-
     const mutation = useMutation<
         any,
         AxiosError<UpdateRentalStatusError>,
@@ -131,8 +131,13 @@ export const useUpdateRentalRequestStatus = () => {
                 throw new Error("Missing required fields: rental_id, lender_id, and status are required");
             }
 
-            if (!["accept", "reject"].includes(payload.status)) {
-                throw new Error("Status must be either 'accept' or 'reject'");
+            if (!["accept", "reject", "delivered", "returned"].includes(payload.status)) {
+                throw new Error("Status must be one of: 'accept', 'reject', 'delivered', 'returned'");
+            }
+
+            // Validate reject_message is provided when rejecting
+            if (payload.status === "reject" && !payload.reject_message?.trim()) {
+                throw new Error("Rejection message is required when rejecting a rental");
             }
 
             // Construct request body
@@ -142,14 +147,19 @@ export const useUpdateRentalRequestStatus = () => {
                 status: payload.status,
             };
 
-            console.log("requestBody", requestBody)
-
-            // Add reject_message if provided and status is reject
-            if (payload.status === "reject" && payload.reject_message?.trim()) {
-                requestBody.reject_message = payload.reject_message.trim();
+            // Add reject_message if status is reject
+            if (payload.status === "reject") {
+                requestBody.reject_message = payload.reject_message!.trim();
             }
 
-            const { data } = await axiosApiClient.patch('/rental/update-status', requestBody);
+            // Add return_notes if status is returned and notes are provided
+            if (payload.status === "returned" && payload.return_notes?.trim()) {
+                requestBody.return_notes = payload.return_notes.trim();
+            }
+
+            console.log("Request payload:", requestBody);
+
+            const { data } = await axiosApiClient.put('/rental/update-rental-status', requestBody);
             return data;
         },
         onSuccess: (data, variables) => {
@@ -160,6 +170,11 @@ export const useUpdateRentalRequestStatus = () => {
             queryClient.invalidateQueries({ queryKey: ['rental', variables.rental_id] });
             queryClient.invalidateQueries({ queryKey: ['rentals'] });
             queryClient.invalidateQueries({ queryKey: ['lender-rentals', variables.lender_id] });
+
+            // Also invalidate renter-related queries if applicable
+            if (data?.data?.renter_uid) {
+                queryClient.invalidateQueries({ queryKey: ['renter-rentals', data.data.renter_uid] });
+            }
         },
         onError: (error) => {
             const errorData = error.response?.data;
@@ -182,9 +197,10 @@ export const useUpdateRentalRequestStatus = () => {
         updateStatusAsync: mutation.mutateAsync,
         isLoading: mutation.isPending,
         error: mutation.error,
+        isSuccess: mutation.isSuccess,
+        reset: mutation.reset
     };
 };
-
 
 export const useCreateRequestRentalCostume = () => {
     const createRequestRentalCostumeApiRequest = async (payload: any): Promise<any> => {

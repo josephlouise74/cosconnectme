@@ -1,27 +1,15 @@
 "use client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 import { useGetRentalDataById } from "@/lib/api/rentalApi"
+import { cn } from "@/lib/utils"
 import {
     AlertCircle,
     Calendar,
-    Check,
     Clock,
     CreditCard,
     Loader2,
@@ -30,23 +18,48 @@ import {
     Phone,
     Receipt,
     ShoppingBag,
-    Truck,
-    User,
-    X
+    User
 } from "lucide-react"
-import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { useEffect, useState } from "react"
+import DamageReportDialog from "./DamageReportDialog"
+import RejectRentalDialog from "./RejectDialog"
+import RentalStatusDropdown from "./RentalStatusDropDown"
+import { StatusTimeline } from "./StatusTimeline"
 
 interface LenderRentalDetailsModalProps {
-    isOpen: boolean
-    onClose: () => void
-    rentalId: string | null
-    onApprove?: (rentalId: string) => void | Promise<void>
-    onReject?: (rentalId: string, message?: string) => void | Promise<void>
-    isUpdating?: boolean
-    updateError?: any
+    isOpen: boolean;
+    onClose: () => void;
+    rentalId: string | null;
+    onApprove?: (rentalId: string) => void | Promise<void>;
+    onReject?: (rentalId: string, message: string) => void | Promise<void>;
+    onMarkAsDelivered?: (rentalId: string) => void | Promise<void>;
+    onMarkAsReturned?: (rentalId: string, returnNotes?: string) => void | Promise<void>;
+    onReportDamage?: (rentalId: string, damageDetails: { cost: number; description: string }) => void | Promise<void>;
+    isUpdating?: boolean;
+    updateError?: any;
 }
+
+// Status configuration
+const STATUS_CONFIG = {
+    pending: { color: 'bg-yellow-100 text-yellow-800', label: 'PENDING' },
+    confirmed: { color: 'bg-blue-100 text-blue-800', label: 'CONFIRMED' },
+    accepted: { color: 'bg-green-100 text-green-800', label: 'ACCEPTED' },
+    delivered: { color: 'bg-green-100 text-green-800', label: 'DELIVERED' },
+    returned: { color: 'bg-purple-100 text-purple-800', label: 'RETURNED' },
+    completed: { color: 'bg-gray-100 text-gray-800', label: 'COMPLETED' },
+    cancelled: { color: 'bg-red-100 text-red-800', label: 'CANCELLED' },
+    rejected: { color: 'bg-red-100 text-red-800', label: 'REJECTED' },
+    overdue: { color: 'bg-orange-100 text-orange-800', label: 'OVERDUE' },
+};
+
+const PAYMENT_STATUS_CONFIG = {
+    paid: 'bg-green-100 text-green-800',
+    fully_paid: 'bg-green-100 text-green-800',
+    partially_paid: 'bg-yellow-100 text-yellow-800',
+    unpaid: 'bg-red-100 text-red-800',
+    pending: 'bg-yellow-100 text-yellow-800'
+};
 
 export function LenderRentalDetailsModal({
     isOpen,
@@ -54,11 +67,15 @@ export function LenderRentalDetailsModal({
     rentalId,
     onApprove,
     onReject,
+    onMarkAsDelivered,
+    onMarkAsReturned,
+    onReportDamage,
     isUpdating = false,
     updateError
 }: LenderRentalDetailsModalProps) {
-    const [showRejectDialog, setShowRejectDialog] = useState(false)
-    const [rejectMessage, setRejectMessage] = useState("")
+    // Dialog state
+    const [showRejectDialog, setShowRejectDialog] = useState(false);
+    const [showDamageDialog, setShowDamageDialog] = useState(false);
 
     // Data fetching
     const {
@@ -69,94 +86,123 @@ export function LenderRentalDetailsModal({
         renterSnapshot,
         payments,
         paymentSummary
-    } = useGetRentalDataById(rentalId || "")
+    } = useGetRentalDataById(rentalId || "");
 
-    // Logging for debugging
+    // Reset state when modal closes or rental ID changes
     useEffect(() => {
-        if (rental) {
-            console.log({
-                rentalId,
-                rental,
-                costumeSnapshot,
-                renterSnapshot,
-                payments,
-                paymentSummary,
-                canUpdateStatus: rental?.status === "pending",
-                duration: rental.duration_days,
-                isOverdue: rental && new Date(rental.end_date) < new Date() && rental.status === 'active',
-            });
+        if (!isOpen || !rentalId) {
+            setShowRejectDialog(false);
+            setShowDamageDialog(false);
         }
-    }, [rental, rentalId, costumeSnapshot, renterSnapshot, payments, paymentSummary]);
+    }, [isOpen, rentalId]);
 
-    if (!rentalId) return null
+    // Early return if no rental ID
+    if (!rentalId) return null;
 
-    // UI state - check if we can update the status
-    const canUpdateStatus = rental?.status === "pending"
+    // Rental status logic
+    const rentalStatus = rental?.status?.toLowerCase() || '';
+    const canAcceptReject = rentalStatus === "confirmed";
+    const canMarkAsDelivered = rentalStatus === "accepted";
+    const canMarkAsReturned = rentalStatus === "delivered";
+
+    // Check if rental is overdue
+    const isOverdue = rental && new Date(rental.end_date) < new Date() &&
+        (rentalStatus === 'delivered' || rentalStatus === 'overdue');
+    const daysOverdue = isOverdue && rental ?
+        Math.ceil((new Date().getTime() - new Date(rental.end_date).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
     // Action handlers
     const handleAccept = async () => {
-        if (onApprove && rentalId) {
-            await onApprove(rentalId)
-            onClose()
+        if (!onApprove || !rentalId) return;
+        try {
+            console.log("Accepting rental:", rentalId);
+            await onApprove(rentalId);
+        } catch (error) {
+            console.error("Error accepting rental:", error);
         }
-    }
+    };
 
-    const handleRejectConfirm = async () => {
-        if (onReject && rentalId) {
-            await onReject(rentalId, rejectMessage.trim())
-            setShowRejectDialog(false)
-            setRejectMessage("")
-            onClose()
+    const handleRejectConfirm = async (message: string) => {
+        if (!onReject || !rentalId) return;
+        try {
+            console.log("Rejecting rental:", rentalId, "with message:", message);
+            await onReject(rentalId, message);
+            setShowRejectDialog(false);
+        } catch (error) {
+            console.error("Error rejecting rental:", error);
         }
-    }
+    };
 
-    const handleRejectCancel = () => {
-        setShowRejectDialog(false)
-        setRejectMessage("")
-    }
+    const handleMarkAsDelivered = async () => {
+        if (!onMarkAsDelivered || !rentalId) return;
+        try {
+            console.log("Marking rental as delivered:", rentalId);
+            await onMarkAsDelivered(rentalId);
+        } catch (error) {
+            console.error("Error marking rental as delivered:", error);
+        }
+    };
+
+    const handleReturnIntact = async () => {
+        if (!onMarkAsReturned || !rentalId) return;
+        try {
+            console.log("Marking rental as returned (intact):", rentalId);
+            await onMarkAsReturned(rentalId, "Item returned in good condition");
+        } catch (error) {
+            console.error("Error marking rental as returned:", error);
+        }
+    };
+
+    const handleReturnDamaged = () => {
+        setShowDamageDialog(true);
+    };
+
+    const handleDamageReportSubmit = async (damageDetails: { cost: number; description: string }) => {
+        if (!onReportDamage || !rentalId) return;
+        try {
+            console.log("Submitting damage report:", rentalId, damageDetails);
+            await onReportDamage(rentalId, damageDetails);
+            setShowDamageDialog(false);
+        } catch (error) {
+            console.error("Error reporting damage:", error);
+        }
+    };
 
     // Utility functions
-    const getStatusColor = (status: string) => {
-        const colors = {
-            pending: 'bg-yellow-100 text-yellow-800',
-            confirmed: 'bg-blue-100 text-blue-800',
-            active: 'bg-green-100 text-green-800',
-            completed: 'bg-gray-100 text-gray-800',
-            cancelled: 'bg-red-100 text-red-800'
-        }
-        return colors[status?.toLowerCase() as keyof typeof colors] || 'bg-gray-100 text-gray-800'
-    }
+    const getStatusColor = (status: string): string => {
+        return STATUS_CONFIG[status?.toLowerCase() as keyof typeof STATUS_CONFIG]?.color || 'bg-gray-100 text-gray-800';
+    };
 
-    const getPaymentStatusColor = (status: string) => {
-        const colors = {
-            paid: 'bg-green-100 text-green-800',
-            fully_paid: 'bg-green-100 text-green-800',
-            partially_paid: 'bg-yellow-100 text-yellow-800',
-            unpaid: 'bg-red-100 text-red-800',
-            pending: 'bg-yellow-100 text-yellow-800'
-        }
-        return colors[status?.toLowerCase() as keyof typeof colors] || 'bg-gray-100 text-gray-800'
-    }
+    const getPaymentStatusColor = (status: string): string => {
+        return PAYMENT_STATUS_CONFIG[status?.toLowerCase() as keyof typeof PAYMENT_STATUS_CONFIG] || 'bg-gray-100 text-gray-800';
+    };
 
-    const formatDate = (dateString: string) => {
-        if (!dateString) return "-"
+    const formatDate = (dateString: string): string => {
+        if (!dateString) return "-";
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
-        })
-    }
+        });
+    };
 
-    const formatCurrency = (amount: string | number) => {
-        return `₱${Number(amount).toLocaleString()}`
-    }
+    const formatCurrency = (amount: string | number): string => {
+        const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+        return `₱${numAmount.toLocaleString()}`;
+    };
 
-    // Check if rental is overdue
-    const isOverdue = rental && new Date(rental.end_date) < new Date() && rental.status === 'active'
-    const daysOverdue = isOverdue && rental ? Math.ceil((new Date().getTime() - new Date(rental.end_date).getTime()) / (1000 * 60 * 60 * 24)) : 0
-
-    // Component for section items with consistent styling
-    const DetailItem = ({ label, value, icon, className }: { label: string, value: React.ReactNode, icon?: React.ReactNode, className?: string }) => (
+    // Component for detail items
+    const DetailItem = ({
+        label,
+        value,
+        icon,
+        className
+    }: {
+        label: string;
+        value: React.ReactNode;
+        icon?: React.ReactNode;
+        className?: string;
+    }) => (
         <div className={cn("space-y-0.5", className)}>
             <div className="flex items-center">
                 {icon && <span className="mr-1.5 text-muted-foreground">{icon}</span>}
@@ -172,57 +218,42 @@ export function LenderRentalDetailsModal({
                 <DialogContent className="max-w-[95vw] md:max-w-[90vw] lg:max-w-[80vw] h-[90vh] p-0 gap-0 flex flex-col">
                     {/* Fixed Header */}
                     <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-white">
-                        <DialogTitle className="flex items-center justify-between">
-                            {loadingDetails ? (
-                                <div className="flex items-center">
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    <span className="text-base">Loading rental details...</span>
-                                </div>
-                            ) : (
-                                <div className="flex items-center">
-                                    <span className="text-base font-semibold">Rental Details</span>
-                                    {rental?.reference_code && (
-                                        <span className="ml-2 text-xs text-muted-foreground font-normal">
-                                            ({rental.reference_code})
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-
-                            {!loadingDetails && canUpdateStatus && (
-                                <div className="flex space-x-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setShowRejectDialog(true)}
-                                        disabled={isUpdating}
-                                        className="h-8 px-3 text-xs"
-                                    >
-                                        {isUpdating ? (
-                                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                                        ) : (
-                                            <X className="h-3 w-3 mr-1.5" />
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="flex items-center">
+                                {loadingDetails ? (
+                                    <div className="flex items-center">
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        <span className="text-base">Loading rental details...</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center">
+                                        <span className="text-base font-semibold">Rental Details</span>
+                                        {rental?.reference_code && (
+                                            <span className="ml-2 text-xs text-muted-foreground font-normal">
+                                                ({rental.reference_code})
+                                            </span>
                                         )}
-                                        Reject
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        onClick={handleAccept}
-                                        disabled={isUpdating}
-                                        className="h-8 px-3 text-xs"
-                                    >
-                                        {isUpdating ? (
-                                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                                        ) : (
-                                            <Check className="h-3 w-3 mr-1.5" />
-                                        )}
-                                        Accept
-                                    </Button>
-                                </div>
+                                    </div>
+                                )}
+                            </DialogTitle>
+                            {/* Action Dropdown Menu */}
+                            {!loadingDetails && !error && rental && (
+                                <RentalStatusDropdown
+                                    isUpdating={isUpdating}
+                                    canAcceptReject={canAcceptReject}
+                                    canMarkAsDelivered={canMarkAsDelivered}
+                                    canMarkAsReturned={canMarkAsReturned}
+                                    onAccept={handleAccept}
+                                    onOpenRejectDialog={() => setShowRejectDialog(true)}
+                                    onMarkAsDelivered={handleMarkAsDelivered}
+                                    onReturnIntact={handleReturnIntact}
+                                    onReturnDamaged={handleReturnDamaged}
+                                    onClose={onClose}
+                                    rentalStatus={rental.status || ''}
+                                />
                             )}
-                        </DialogTitle>
+                        </div>
                     </DialogHeader>
-
                     {/* Scrollable Content */}
                     <div className="flex-1 overflow-hidden">
                         {error ? (
@@ -243,8 +274,8 @@ export function LenderRentalDetailsModal({
                                 <div className="p-6">
                                     {/* Status section */}
                                     <div className="mb-6 flex items-center gap-3 flex-wrap">
-                                        <Badge className={cn("text-xs px-3 py-1", getStatusColor(rental?.status || ''))}>
-                                            {rental?.status?.toUpperCase()}
+                                        <Badge className={cn("text-xs px-3 py-1", getStatusColor(rentalStatus))}>
+                                            {STATUS_CONFIG[rentalStatus as keyof typeof STATUS_CONFIG]?.label || rentalStatus.toUpperCase()}
                                         </Badge>
                                         {isOverdue && (
                                             <Badge variant="destructive" className="text-xs px-3 py-1">
@@ -256,20 +287,29 @@ export function LenderRentalDetailsModal({
                                                 Payment via GCash: {rental.payment_gcash_number}
                                             </Badge>
                                         )}
+                                        {rental?.damage_reported && (
+                                            <Badge variant="destructive" className="text-xs px-3 py-1 bg-amber-100 text-amber-800 border-amber-200">
+                                                DAMAGE REPORTED
+                                            </Badge>
+                                        )}
                                     </div>
-
                                     {updateError && (
                                         <Alert variant="destructive" className="mb-6">
                                             <AlertCircle className="h-4 w-4" />
                                             <AlertDescription>
-                                                Failed to update rental status. Please try again.
+                                                {typeof updateError === 'string'
+                                                    ? updateError
+                                                    : 'Failed to update rental status. Please try again.'}
                                             </AlertDescription>
                                         </Alert>
                                     )}
 
+                                    {/* Status Timeline - Using the separated component */}
+                                    {rentalStatus !== "pending" && <StatusTimeline currentStatus={rentalStatus} />}
+
                                     {/* Main content grid */}
                                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                        {/* Left Column */}
+                                        {/* Left Column - Costume & Renter Info */}
                                         <div className="space-y-6">
                                             {/* Costume Information */}
                                             <Card className="shadow-sm border">
@@ -291,22 +331,17 @@ export function LenderRentalDetailsModal({
                                                             />
                                                         </div>
                                                     )}
-
                                                     <div className="space-y-4">
                                                         <DetailItem
                                                             label="Costume Name"
                                                             value={<span className="text-base font-semibold">{costumeSnapshot?.name || "-"}</span>}
                                                         />
-
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <DetailItem label="Brand" value={costumeSnapshot?.brand || "-"} />
                                                             <DetailItem label="Size" value={costumeSnapshot?.sizes || "-"} />
                                                         </div>
-
                                                         <DetailItem label="Category" value={costumeSnapshot?.category || "-"} />
-
                                                         <Separator />
-
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <DetailItem
                                                                 label="Rental Price"
@@ -322,7 +357,6 @@ export function LenderRentalDetailsModal({
                                                     </div>
                                                 </CardContent>
                                             </Card>
-
                                             {/* Renter Information */}
                                             <Card className="shadow-sm border">
                                                 <CardHeader className="pb-4">
@@ -355,8 +389,7 @@ export function LenderRentalDetailsModal({
                                                 </CardContent>
                                             </Card>
                                         </div>
-
-                                        {/* Right Column */}
+                                        {/* Right Column - Rental & Payment Details */}
                                         <div className="space-y-6">
                                             {/* Rental Details */}
                                             <Card className="shadow-sm border">
@@ -379,7 +412,6 @@ export function LenderRentalDetailsModal({
                                                             icon={<Calendar className="h-4 w-4" />}
                                                         />
                                                     </div>
-
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <DetailItem
                                                             label="Duration"
@@ -389,10 +421,9 @@ export function LenderRentalDetailsModal({
                                                         <DetailItem
                                                             label="Delivery Method"
                                                             value={<span className="font-medium">{(rental?.delivery_method || "-").toUpperCase()}</span>}
-                                                            icon={<Truck className="h-4 w-4" />}
+                                                            icon={<MapPin className="h-4 w-4" />}
                                                         />
                                                     </div>
-
                                                     {rental?.pickup_location && (
                                                         <DetailItem
                                                             label="Pickup Location"
@@ -400,9 +431,7 @@ export function LenderRentalDetailsModal({
                                                             icon={<MapPin className="h-4 w-4" />}
                                                         />
                                                     )}
-
                                                     <Separator />
-
                                                     {/* Financial Summary */}
                                                     <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                                                         <h4 className="font-medium text-sm">Financial Summary</h4>
@@ -416,13 +445,18 @@ export function LenderRentalDetailsModal({
                                                                 value={<span className="text-blue-600 font-semibold">{formatCurrency(rental?.security_deposit || 0)}</span>}
                                                             />
                                                         </div>
+                                                        {rental?.damage_cost && Number(rental.damage_cost) > 0 && (
+                                                            <DetailItem
+                                                                label="Damage Cost"
+                                                                value={<span className="text-red-600 font-semibold">- {formatCurrency(rental.damage_cost)}</span>}
+                                                            />
+                                                        )}
                                                         <DetailItem
                                                             label="Total Amount"
                                                             value={<span className="text-lg font-bold text-primary">{formatCurrency(rental?.total_amount || 0)}</span>}
                                                             icon={<Receipt className="h-4 w-4" />}
                                                         />
                                                     </div>
-
                                                     {rental?.special_instructions && (
                                                         <>
                                                             <Separator />
@@ -434,7 +468,6 @@ export function LenderRentalDetailsModal({
                                                             </div>
                                                         </>
                                                     )}
-
                                                     {rental?.notes && (
                                                         <>
                                                             <Separator />
@@ -448,7 +481,6 @@ export function LenderRentalDetailsModal({
                                                     )}
                                                 </CardContent>
                                             </Card>
-
                                             {/* Payment Information */}
                                             <Card className="shadow-sm border">
                                                 <CardHeader className="pb-4">
@@ -464,7 +496,6 @@ export function LenderRentalDetailsModal({
                                                             {(paymentSummary?.status || 'PENDING').toUpperCase().replace('_', ' ')}
                                                         </Badge>
                                                     </div>
-
                                                     <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <DetailItem
@@ -481,7 +512,6 @@ export function LenderRentalDetailsModal({
                                                             value={<span className="text-blue-600 font-semibold">{formatCurrency(paymentSummary?.total_refunded || 0)}</span>}
                                                         />
                                                     </div>
-
                                                     {rental?.refund_gcash_number && rental?.refund_account_name && (
                                                         <div className="bg-blue-50 p-3 rounded-md">
                                                             <DetailItem
@@ -491,7 +521,6 @@ export function LenderRentalDetailsModal({
                                                             />
                                                         </div>
                                                     )}
-
                                                     {/* Payment History */}
                                                     {payments && payments.length > 0 && (
                                                         <>
@@ -535,7 +564,6 @@ export function LenderRentalDetailsModal({
                                                     )}
                                                 </CardContent>
                                             </Card>
-
                                             {/* Extension Details (if applicable) */}
                                             {rental?.extended_days !== undefined && rental.extended_days > 0 && (
                                                 <Card className="shadow-sm border border-orange-200">
@@ -553,13 +581,12 @@ export function LenderRentalDetailsModal({
                                                             />
                                                             <DetailItem
                                                                 label="Extension Fee"
-                                                                value={<span className="font-semibold text-orange-600">{formatCurrency(rental.extension_fee)}</span>}
+                                                                value={<span className="font-semibold text-orange-600">{formatCurrency(rental.extension_fee || 0)}</span>}
                                                             />
                                                         </div>
                                                     </CardContent>
                                                 </Card>
                                             )}
-
                                             {/* Damage Information (if applicable) */}
                                             {rental?.damage_reported && (
                                                 <Card className="shadow-sm border border-red-200">
@@ -572,7 +599,7 @@ export function LenderRentalDetailsModal({
                                                     <CardContent className="space-y-4">
                                                         <DetailItem
                                                             label="Damage Cost"
-                                                            value={<span className="font-semibold text-red-600">{formatCurrency(rental.damage_cost)}</span>}
+                                                            value={<span className="font-semibold text-red-600">{formatCurrency(rental.damage_cost || 0)}</span>}
                                                         />
                                                         {rental?.return_condition_notes && (
                                                             <div className="space-y-2">
@@ -593,42 +620,20 @@ export function LenderRentalDetailsModal({
                     </div>
                 </DialogContent>
             </Dialog>
-
-            {/* Reject dialog */}
-            <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-                <AlertDialogContent className="max-w-md">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-base">Reject Rental Request</AlertDialogTitle>
-                        <AlertDialogDescription className="text-sm">
-                            Please provide a reason for rejecting this rental request. This message will be sent to the renter.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <Textarea
-                        placeholder="Enter reason for rejection..."
-                        value={rejectMessage}
-                        onChange={(e) => setRejectMessage(e.target.value)}
-                        className="min-h-[100px] resize-none text-sm"
-                    />
-                    <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-                        <AlertDialogCancel
-                            onClick={handleRejectCancel}
-                            className="mt-2 sm:mt-0 text-xs h-9"
-                        >
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleRejectConfirm}
-                            disabled={isUpdating || !rejectMessage.trim()}
-                            className="w-full sm:w-auto text-xs h-9"
-                        >
-                            {isUpdating ? (
-                                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                            ) : null}
-                            Confirm Rejection
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Reject and Damage Report Dialogs */}
+            <RejectRentalDialog
+                isOpen={showRejectDialog}
+                onClose={() => setShowRejectDialog(false)}
+                onConfirm={handleRejectConfirm}
+                isUpdating={isUpdating}
+            />
+            <DamageReportDialog
+                isOpen={showDamageDialog}
+                onClose={() => setShowDamageDialog(false)}
+                onSubmit={handleDamageReportSubmit}
+                isUpdating={isUpdating}
+                securityDeposit={rental?.security_deposit as any || 0}
+            />
         </>
-    )
+    );
 }

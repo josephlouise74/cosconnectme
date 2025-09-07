@@ -1,4 +1,6 @@
 "use client"
+
+import { StatusTimeline } from "@/components/Lender/ManageRentals/components/StatusTimeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +9,7 @@ import { useGetRentalDataById, useUpdateRentalRequestStatus } from "@/lib/api/re
 import { Calendar, Check, CreditCard, Loader2, MapPin, Package, User, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect } from "react";
+
 
 interface BorrowerRentalDetailsModalProps {
     isOpen: boolean;
@@ -25,7 +28,7 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
         costumeSnapshot,
         renterSnapshot,
         lender,
-        payments,
+
         paymentSummary,
         isLoading: isFetching,
         error: fetchError,
@@ -56,7 +59,7 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                     lender_id: costumeSnapshot.lender_info.uid,
                     status: "accept"
                 });
-                onClose();
+                refetch();
             } catch (error) {
                 console.error("Failed to accept rental request:", error);
             }
@@ -73,20 +76,34 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                     status: "reject",
                     reject_message: "" // Optional message
                 });
-                onClose();
+                refetch();
             } catch (error) {
                 console.error("Failed to reject rental request:", error);
             }
         }
     };
 
-    // Determine if actions should be shown
-    const showActionButtons = rental?.status === "pending" && costumeSnapshot?.lender_info?.uid;
+    // Determine if actions should be shown - only for pending status for borrowers
+    const showActionButtons = false; // Borrowers don't take actions on their own rentals
 
     // Calculate payment summary safely using the payment_summary from API
     const totalPaid = paymentSummary?.total_paid || "0.00";
     const balanceDue = paymentSummary?.pending_amount || "0.00";
     const isFullyPaid = parseFloat(balanceDue) <= 0;
+
+    // Status badge variant
+    const getStatusBadgeVariant = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'confirmed': return 'default';
+            case 'accepted': return 'success';
+            case 'delivered': return 'outline';
+            case 'returned': return 'secondary';
+            case 'completed': return 'success';
+            case 'rejected': return 'destructive';
+            case 'cancelled': return 'destructive';
+            default: return 'secondary';
+        }
+    };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -137,10 +154,16 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                 <h3 className="text-base font-semibold">{costumeSnapshot?.name || costume?.name}</h3>
                                 <p className="text-xs text-muted-foreground">Reference: {rental.reference_code}</p>
                             </div>
-                            <Badge variant={rental.status === "confirmed" ? "default" : "secondary"} className="self-start sm:self-auto">
+                            <Badge
+
+                                className="self-start sm:self-auto capitalize"
+                            >
                                 {rental.status}
                             </Badge>
                         </div>
+
+                        {/* Status Timeline */}
+                        <StatusTimeline currentStatus={rental.status} userType="borrower" />
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {/* Costume Details */}
@@ -153,19 +176,19 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <div className="flex gap-3">
-                                        <div className="relative w-16 h-16 overflow-hidden rounded-lg flex-shrink-0">
+                                        <div className="relative w-20 h-20 overflow-hidden rounded-lg flex-shrink-0">
                                             <Image
                                                 src={costumeSnapshot?.main_images?.front || costume?.main_image || "/placeholder.svg?height=100&width=100"}
                                                 alt={costumeSnapshot?.name || costume?.name || "Costume"}
                                                 fill
-                                                sizes="64px"
+                                                sizes="80px"
                                                 className="object-cover"
                                                 priority={false}
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-medium truncate">{costumeSnapshot?.name || costume?.name}</p>
-                                            <p className="text-xs text-muted-foreground truncate">Brand: {costumeSnapshot?.brand || costume?.brand}</p>
+                                            <p className="text-sm font-medium truncate">{costumeSnapshot?.name || costume?.name}</p>
+                                            <p className="text-xs text-muted-foreground truncate mt-1">Brand: {costumeSnapshot?.brand || costume?.brand}</p>
                                             <p className="text-xs text-muted-foreground truncate">Category: {costumeSnapshot?.category || costume?.category}</p>
                                             <p className="text-xs text-muted-foreground truncate">Sizes: {costumeSnapshot?.sizes || costume?.sizes}</p>
                                         </div>
@@ -185,13 +208,21 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs text-muted-foreground">Start Date:</span>
                                         <span className="text-xs font-medium">
-                                            {new Date(rental.start_date).toLocaleDateString()}
+                                            {new Date(rental.start_date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs text-muted-foreground">End Date:</span>
                                         <span className="text-xs font-medium">
-                                            {new Date(rental.end_date).toLocaleDateString()}
+                                            {new Date(rental.end_date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
@@ -214,7 +245,7 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                 <CardHeader className="pb-2 pt-3">
                                     <CardTitle className="flex items-center gap-2 text-sm">
                                         <User className="h-3.5 w-3.5" />
-                                        Lender Information
+                                        Costume Owner
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-2">
@@ -249,6 +280,14 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                 </CardHeader>
                                 <CardContent className="space-y-2">
                                     <div className="flex justify-between items-center">
+                                        <span className="text-xs text-muted-foreground">Rental Fee:</span>
+                                        <span className="text-xs font-medium">₱{rental.costume_snapshot.rental_price}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs text-muted-foreground">Security Deposit:</span>
+                                        <span className="text-xs font-medium">₱{rental.security_deposit}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center border-t pt-2 mt-2">
                                         <span className="text-xs text-muted-foreground">Total Amount:</span>
                                         <span className="text-xs font-medium">₱{rental.total_amount}</span>
                                     </div>
@@ -261,8 +300,8 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                         <span className="text-xs font-medium text-red-600">₱{balanceDue}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-1">
-                                        <span className="text-xs text-muted-foreground">Status:</span>
-                                        <Badge variant={isFullyPaid ? "default" : "destructive"} className="text-[10px] px-1.5 py-0">
+                                        <span className="text-xs text-muted-foreground">Payment Status:</span>
+                                        <Badge className="text-[10px] px-1.5 py-0">
                                             {paymentSummary?.status || "pending"}
                                         </Badge>
                                     </div>
@@ -281,19 +320,19 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs text-muted-foreground">Pickup Location:</span>
                                         <span className="text-xs font-medium text-right max-w-[60%] truncate">
-                                            {rental.pickup_location}
+                                            {rental.pickup_location || "Not specified"}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs text-muted-foreground">Delivery Method:</span>
                                         <span className="text-xs font-medium capitalize">
-                                            {rental.delivery_method}
+                                            {rental.delivery_method || "Not specified"}
                                         </span>
                                     </div>
                                     {rental.special_instructions && (
                                         <div className="pt-1">
                                             <span className="text-xs text-muted-foreground block mb-1">Special Instructions:</span>
-                                            <p className="text-xs p-1.5 bg-muted rounded text-wrap break-words">
+                                            <p className="text-xs p-2 bg-muted rounded text-wrap break-words">
                                                 {rental.special_instructions}
                                             </p>
                                         </div>
@@ -301,13 +340,13 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                 </CardContent>
                             </Card>
 
-                            {/* Renter Information */}
+                            {/* Borrower Information (your info) */}
                             {renterSnapshot && (
                                 <Card className="shadow-sm sm:col-span-2 lg:col-span-1">
                                     <CardHeader className="pb-2 pt-3">
                                         <CardTitle className="flex items-center gap-2 text-sm">
                                             <User className="h-3.5 w-3.5" />
-                                            Renter Information
+                                            Your Information
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-2">
@@ -342,32 +381,7 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                             )}
                         </div>
 
-                        {/* Action Buttons - Render only if actionable */}
-                        {showActionButtons && (
-                            <div className="flex flex-wrap justify-end gap-3 pt-4 border-t">
-                                <Button
-                                    onClick={handleReject}
-                                    variant="destructive"
-                                    size="sm"
-                                    disabled={isPending}
-                                    className="flex items-center gap-1.5 text-xs h-8"
-                                >
-                                    {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                                    <X className="h-3.5 w-3.5" />
-                                    Reject Request
-                                </Button>
-                                <Button
-                                    onClick={handleAccept}
-                                    size="sm"
-                                    disabled={isPending}
-                                    className="flex items-center gap-1.5 text-xs h-8"
-                                >
-                                    {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                                    <Check className="h-3.5 w-3.5" />
-                                    Accept Request
-                                </Button>
-                            </div>
-                        )}
+                        {/* Action Buttons - Render only if actionable - Removed for borrowers */}
 
                         {/* Close button - always shown */}
                         <div className="flex justify-end pt-3 border-t">
