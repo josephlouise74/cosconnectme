@@ -85,7 +85,8 @@ export function LenderRentalDetailsModal({
         costumeSnapshot,
         renterSnapshot,
         payments,
-        paymentSummary
+        paymentSummary,
+
     } = useGetRentalDataById(rentalId || "");
 
     // Reset state when modal closes or rental ID changes
@@ -117,6 +118,7 @@ export function LenderRentalDetailsModal({
         try {
             console.log("Accepting rental:", rentalId);
             await onApprove(rentalId);
+            window.location.reload();
         } catch (error) {
             console.error("Error accepting rental:", error);
         }
@@ -128,6 +130,7 @@ export function LenderRentalDetailsModal({
             console.log("Rejecting rental:", rentalId, "with message:", message);
             await onReject(rentalId, message);
             setShowRejectDialog(false);
+            window.location.reload();
         } catch (error) {
             console.error("Error rejecting rental:", error);
         }
@@ -138,6 +141,7 @@ export function LenderRentalDetailsModal({
         try {
             console.log("Marking rental as delivered:", rentalId);
             await onMarkAsDelivered(rentalId);
+            window.location.reload();
         } catch (error) {
             console.error("Error marking rental as delivered:", error);
         }
@@ -148,6 +152,7 @@ export function LenderRentalDetailsModal({
         try {
             console.log("Marking rental as returned (intact):", rentalId);
             await onMarkAsReturned(rentalId, "Item returned in good condition");
+            window.location.reload();
         } catch (error) {
             console.error("Error marking rental as returned:", error);
         }
@@ -163,6 +168,7 @@ export function LenderRentalDetailsModal({
             console.log("Submitting damage report:", rentalId, damageDetails);
             await onReportDamage(rentalId, damageDetails);
             setShowDamageDialog(false);
+            window.location.reload();
         } catch (error) {
             console.error("Error reporting damage:", error);
         }
@@ -305,7 +311,7 @@ export function LenderRentalDetailsModal({
                                     )}
 
                                     {/* Status Timeline - Using the separated component */}
-                                    {rentalStatus !== "pending" && <StatusTimeline currentStatus={rentalStatus} />}
+                                    {rentalStatus !== "pending" && <StatusTimeline currentStatus={rentalStatus} userType="lender" />}
 
                                     {/* Main content grid */}
                                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

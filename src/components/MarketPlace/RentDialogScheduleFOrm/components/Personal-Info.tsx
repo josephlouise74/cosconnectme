@@ -269,19 +269,7 @@ export const PersonalDetailsForm: React.FC = () => {
                 </CardContent>
             </Card>
 
-            {/* Debug information - remove in production */}
-            {process.env.NODE_ENV === 'development' && (
-                <Card className="border-orange-200 bg-orange-50">
-                    <CardHeader>
-                        <CardTitle className="text-sm text-orange-800">Debug Info</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <pre className="text-xs text-orange-700 whitespace-pre-wrap">
-                            {JSON.stringify(personalDetails, null, 2)}
-                        </pre>
-                    </CardContent>
-                </Card>
-            )}
+
         </div>
     )
 }

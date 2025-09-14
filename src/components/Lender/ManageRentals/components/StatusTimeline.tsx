@@ -64,7 +64,7 @@ export function StatusTimeline({ currentStatus, userType }: StatusTimelineProps)
         if (userType === 'borrower') {
             return [
                 "Pending",
-                "Confirmed",
+                "Payment Confirmed",
                 "Accepted",
                 "Costume Delivered",
                 "Costume Returned",
@@ -73,7 +73,7 @@ export function StatusTimeline({ currentStatus, userType }: StatusTimelineProps)
         } else {
             return [
                 "Pending",
-                "Confirmed",
+                "Payment Confirmed",
                 "Accepted",
                 "Costume Delivered",
                 "Costume Returned",
