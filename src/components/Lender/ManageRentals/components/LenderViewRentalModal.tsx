@@ -467,7 +467,7 @@ export function LenderRentalDetailsModal({
                                                         <>
                                                             <Separator />
                                                             <div className="space-y-2">
-                                                                <p className="text-sm font-medium text-muted-foreground">Special Instructions</p>
+                                                                <p className="text-sm font-medium text-muted-foreground">Special Instructions (Landmark)</p>
                                                                 <div className="bg-blue-50 p-3 rounded-md">
                                                                     <p className="text-sm whitespace-pre-wrap">{rental.special_instructions}</p>
                                                                 </div>

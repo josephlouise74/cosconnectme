@@ -1,4 +1,4 @@
-import TermsAndConditions from '@/components/UiSections/TermsAndConditions'
+import TermsAndConditions from '@/components/layout/UiSections/TermsAndConditions'
 import React from 'react'
 
 const TermsAndConditionsPage = () => {

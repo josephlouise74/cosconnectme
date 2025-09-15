@@ -270,6 +270,112 @@ export const PersonalDetailsForm: React.FC = () => {
             </Card>
 
 
+             {/* Personal Information Summary */}
+             {process.env.NODE_ENV === 'development' && (
+                <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-blue-800">
+                            <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                            Personal Information Summary
+                        </CardTitle>
+                        <CardDescription className="text-blue-600">
+                            Review your entered information
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Basic Information */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 mb-4">
+                                    <User className="h-4 w-4" />
+                                    Basic Information
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                        <div className="text-xs text-blue-500 uppercase tracking-wide font-medium mb-1">
+                                            Full Name
+                                        </div>
+                                        <div className="text-sm font-medium text-gray-900 break-words">
+                                            {personalDetails?.first_name && personalDetails?.last_name
+                                                ? `${personalDetails.first_name} ${personalDetails.last_name}`
+                                                : 'Not provided'
+                                            }
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                        <div className="text-xs text-blue-500 uppercase tracking-wide font-medium mb-1">
+                                            Email Address
+                                        </div>
+                                        <div className="text-sm font-medium text-gray-900 break-all">
+                                            {personalDetails?.email || 'Not provided'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Contact & Details */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-blue-700 mb-4">
+                                    <Phone className="h-4 w-4" />
+                                    Contact & Details
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                        <div className="text-xs text-blue-500 uppercase tracking-wide font-medium mb-1">
+                                            Phone Number
+                                        </div>
+                                        <div className="text-sm font-medium text-gray-900">
+                                            {personalDetails?.phone_number
+                                                ? formatPhoneNumber(personalDetails.phone_number)
+                                                : 'Not provided'
+                                            }
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                        <div className="text-xs text-blue-500 uppercase tracking-wide font-medium mb-1">
+                                            Date of Birth
+                                        </div>
+                                        <div className="text-sm font-medium text-gray-900">
+                                            {personalDetails?.date_of_birth
+                                                ? new Date(personalDetails.date_of_birth).toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric'
+                                                })
+                                                : 'Not provided'
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Validation Status */}
+                        {/* <div className="mt-8 pt-6 border-t border-blue-200">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className={`h-2 w-2 rounded-full ${Object.keys(errors.personal_details || {}).length === 0
+                                        ? 'bg-green-500'
+                                        : 'bg-red-500'
+                                        }`}></div>
+                                    <span className="text-sm font-medium text-blue-700">
+                                        Form Validation Status
+                                    </span>
+                                </div>
+                                <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${Object.keys(errors.personal_details || {}).length === 0
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-red-100 text-red-700'
+                                    }`}>
+                                    {Object.keys(errors.personal_details || {}).length === 0
+                                        ? 'Valid'
+                                        : `${Object.keys(errors.personal_details || {}).length} error(s)`
+                                    }
+                                </span>
+                            </div>
+                        </div> */}
+                    </CardContent>
+                </Card>
+            )}
         </div>
     )
 }

@@ -133,7 +133,7 @@ export const RentSummary: React.FC<RentSummaryProps> = ({ costumeInfo }) => {
                     {formData.schedule?.special_instructions && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                             <p className="text-sm text-gray-600">
-                                <strong>Special Instructions:</strong> {formData.schedule.special_instructions}
+                                <strong>Special Instructions  (Landmark):</strong> {formData.schedule.special_instructions}
                             </p>
                         </div>
                     )}

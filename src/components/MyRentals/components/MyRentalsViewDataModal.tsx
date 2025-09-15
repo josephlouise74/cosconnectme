@@ -331,7 +331,7 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                                     </div>
                                     {rental.special_instructions && (
                                         <div className="pt-1">
-                                            <span className="text-xs text-muted-foreground block mb-1">Special Instructions:</span>
+                                            <span className="text-xs text-muted-foreground block mb-1">Special Instructions  (Landmark):</span>
                                             <p className="text-xs p-2 bg-muted rounded text-wrap break-words">
                                                 {rental.special_instructions}
                                             </p>

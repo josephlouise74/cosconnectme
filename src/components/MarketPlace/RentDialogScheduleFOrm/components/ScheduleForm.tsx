@@ -368,7 +368,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Clock className="h-5 w-5 text-rose-500" />
-                        Special Instructions
+                        Special Instructions  (Landmark)
                     </CardTitle>
                     <CardDescription>Any special requests or notes for your rental? (Optional)</CardDescription>
                 </CardHeader>
