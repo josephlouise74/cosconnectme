@@ -5,6 +5,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
+import { useCreatePost } from '@/lib/api/communityApi'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Image as LucideImage, X } from 'lucide-react'
@@ -23,7 +24,7 @@ type PostFormValues = z.infer<typeof postFormSchema>
 
 const MAX_IMAGES = 10
 
-const CreatePostForm = () => {
+const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([])
@@ -37,6 +38,7 @@ const CreatePostForm = () => {
   })
 
   const { userRolesData, isAuthenticated } = useSupabaseAuth()
+  const { createPost, isLoading } = useCreatePost()
 
   const avatarUrl = userRolesData?.personal_info?.profile_image || '/placeholder-avatar.jpg'
   const avatarFallback = userRolesData?.personal_info?.full_name
@@ -91,27 +93,31 @@ const CreatePostForm = () => {
     }
 
     try {
-      console.log('Creating post with data:', {
+      const prepareData = {
         content: values.content,
         images: uploadedImageUrls,
         author: {
           id: userRolesData?.user_id,
           name: userRolesData?.personal_info?.full_name || userRolesData?.username,
-          avatar: userRolesData?.personal_info?.profile_image
+          avatar: userRolesData?.personal_info?.profile_image,
+          role: userRolesData?.roles?.[0]
         }
-      });
+      }
+      console.log('Creating post with data:', prepareData);
+
+
 
       // In a real implementation, you would call your API here
-      // await createPost({ content: values.content, images: uploadedImageUrls });
-
-      console.log('Post created successfully');
-      toast.success('Post created!');
+      await createPost(prepareData);
 
       // Reset form
-      /*  form.reset();
-       setUploadedImageUrls([]);
-       setIsDialogOpen(false); */
+      form.reset();
+      setUploadedImageUrls([]);
+      setIsDialogOpen(false);
 
+      if (onPostCreated) {
+        onPostCreated();
+      }
       console.log('Form reset and dialog closed');
     } catch (error) {
       console.error('Error creating post:', error);
@@ -267,7 +273,7 @@ const CreatePostForm = () => {
                 <Button
                   type="submit"
                   className='cursor-pointer'
-                  disabled={isUploading || !form.watch('content')?.trim()}
+                  disabled={isUploading || isLoading || !form.watch('content')?.trim()}
                 >
                   Post
                 </Button>
