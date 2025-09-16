@@ -71,7 +71,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
             })
             if (onRefresh) {
                 onRefresh()
-                handleCloseModal() // Close modal after successful action
             }
         } catch (error) {
             console.error("Failed to approve rental:", error)
@@ -93,7 +92,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
             })
             if (onRefresh) {
                 onRefresh()
-                handleCloseModal() // Close modal after successful action
             }
         } catch (error) {
             console.error("Failed to reject rental:", error)
@@ -113,7 +111,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
             })
             if (onRefresh) {
                 onRefresh()
-                handleCloseModal()
             }
         } catch (error) {
             console.error("Failed to mark rental as delivered:", error)
@@ -134,7 +131,6 @@ export function LenderRentalsTable({ data, isLoading, error, lenderId, onRefresh
             })
             if (onRefresh) {
                 onRefresh()
-                handleCloseModal()
             }
         } catch (error) {
             console.error("Failed to mark rental as returned:", error)

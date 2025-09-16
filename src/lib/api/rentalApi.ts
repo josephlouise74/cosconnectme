@@ -162,7 +162,7 @@ export const useUpdateRentalRequestStatus = () => {
             const { data } = await axiosApiClient.put('/rental/update-rental-status', requestBody);
             return data;
         },
-        onSuccess: (data, variables) => {
+        /* onSuccess: (data, variables) => {
             const message = data?.message || 'Rental status updated successfully';
             toast.success(message);
 
@@ -174,7 +174,17 @@ export const useUpdateRentalRequestStatus = () => {
             // Also invalidate renter-related queries if applicable
             if (data?.data?.renter_uid) {
                 queryClient.invalidateQueries({ queryKey: ['renter-rentals', data.data.renter_uid] });
-            }
+            } */
+
+                onSuccess: (data, variables) => {
+                    const message = data?.message || 'Rental status updated successfully';
+                    toast.success(message);
+        
+                    // Invalidate related queries to refresh UI
+                    queryClient.invalidateQueries({ queryKey: ['rental', variables.rental_id] });
+                    queryClient.invalidateQueries({ queryKey: ['rentalData', variables.rental_id] });
+                    queryClient.invalidateQueries({ queryKey: ['rentals'] });
+                    queryClient.invalidateQueries({ queryKey: ['lender-rentals', variables.lender_id] });
         },
         onError: (error) => {
             const errorData = error.response?.data;

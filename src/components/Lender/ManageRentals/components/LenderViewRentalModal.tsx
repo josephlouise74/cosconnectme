@@ -86,7 +86,8 @@ export function LenderRentalDetailsModal({
         renterSnapshot,
         payments,
         paymentSummary,
-
+        refetch,
+ 
     } = useGetRentalDataById(rentalId || "");
 
     // Reset state when modal closes or rental ID changes
@@ -118,7 +119,7 @@ export function LenderRentalDetailsModal({
         try {
             console.log("Accepting rental:", rentalId);
             await onApprove(rentalId);
-            window.location.reload();
+            await refetch();
         } catch (error) {
             console.error("Error accepting rental:", error);
         }
@@ -130,7 +131,7 @@ export function LenderRentalDetailsModal({
             console.log("Rejecting rental:", rentalId, "with message:", message);
             await onReject(rentalId, message);
             setShowRejectDialog(false);
-            window.location.reload();
+            await refetch();
         } catch (error) {
             console.error("Error rejecting rental:", error);
         }
@@ -141,7 +142,7 @@ export function LenderRentalDetailsModal({
         try {
             console.log("Marking rental as delivered:", rentalId);
             await onMarkAsDelivered(rentalId);
-            window.location.reload();
+            await refetch();
         } catch (error) {
             console.error("Error marking rental as delivered:", error);
         }
@@ -152,7 +153,7 @@ export function LenderRentalDetailsModal({
         try {
             console.log("Marking rental as returned (intact):", rentalId);
             await onMarkAsReturned(rentalId, "Item returned in good condition");
-            window.location.reload();
+            await refetch();
         } catch (error) {
             console.error("Error marking rental as returned:", error);
         }
@@ -168,7 +169,7 @@ export function LenderRentalDetailsModal({
             console.log("Submitting damage report:", rentalId, damageDetails);
             await onReportDamage(rentalId, damageDetails);
             setShowDamageDialog(false);
-            window.location.reload();
+            await refetch();
         } catch (error) {
             console.error("Error reporting damage:", error);
         }
@@ -467,7 +468,7 @@ export function LenderRentalDetailsModal({
                                                         <>
                                                             <Separator />
                                                             <div className="space-y-2">
-                                                                <p className="text-sm font-medium text-muted-foreground">Special Instructions (Landmark)</p>
+                                                                <p className="text-sm font-medium text-muted-foreground">Special Instructions</p>
                                                                 <div className="bg-blue-50 p-3 rounded-md">
                                                                     <p className="text-sm whitespace-pre-wrap">{rental.special_instructions}</p>
                                                                 </div>
