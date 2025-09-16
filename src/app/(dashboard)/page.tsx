@@ -1,5 +1,6 @@
 "use client"
 
+import SocialFeedSection from "@/components/SocialFeed/SocialFeedSection"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
 /* import Dashboard from "@/components/forms/Lender/DashboardLender";
@@ -54,14 +55,16 @@ const Page = () => {
   if (currentRole === "lender") {
     return (
       <div className="flex overflow-hidden min-h-screen">
-        <ScrollArea className="flex-1">{/*   <Dashboard /> */}</ScrollArea>
+        <ScrollArea className="flex-1">
+
+        </ScrollArea>
       </div>
     )
   }
 
   // Show social feed for borrowers
   if (currentRole === "borrower") {
-    return <div className="flex overflow-hidden min-h-screen">{/*  <SocialFeedSection /> */}</div>
+    return <div className="flex overflow-hidden min-h-screen"><SocialFeedSection /></div>
   }
 
   // Fallback for any unexpected state - show debug info
