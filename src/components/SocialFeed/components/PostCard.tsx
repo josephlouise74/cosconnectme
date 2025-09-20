@@ -3,9 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
-
 import { Heart, Loader2, MessageCircle, MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
 import { memo, useCallback, useMemo, useState } from 'react'
@@ -13,56 +11,85 @@ import { toast } from 'sonner'
 import CommentDialog from './CommentDialog'
 import ImageDialog from './ImageDialog'
 import OptimizedPostImage from './OptimizedPostImage'
+import { useLikePost } from '@/lib/api/communityApi'
 
-interface PostCardProps {
-  post: any;
-  onSelect?: (post: any) => void;
+// Define TypeScript interfaces
+interface UserData {
+  uid: string
+  name: string
+  avatar: string
+  email: string
+  role: string
 }
 
-const PostCard = memo(({ post, onSelect }: PostCardProps) => {
+interface PostAuthor {
+  id: string
+  name: string
+  avatar: string
+  role: string
+}
+
+interface PostData {
+  id: string
+  content: string
+  images?: string[]
+  created_at: string
+  heart_count: number
+  is_liked: boolean
+  comment_count: number
+  author_id: string
+  author_name: string
+  author_avatar: string
+  author_role: string
+}
+
+interface PostCardProps {
+  post: PostData
+  onSelect?: (post: PostData) => void
+  refetch?: () => void
+}
+
+const PostCard = memo(({ post, onSelect, refetch }: PostCardProps) => {
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-  const [isLiking, setIsLiking] = useState(false)
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false)
   const [localLikeState, setLocalLikeState] = useState({
     isLiked: post.is_liked,
     likes: post.heart_count
   })
 
-  const { userRolesData, isAuthenticated, isLoading: authLoading } = useSupabaseAuth();
+  const { userRolesData, isAuthenticated, isLoading: authLoading } = useSupabaseAuth()
+  const { mutateAsync: likePost, isPending: isLiking } = useLikePost()
 
   // Memoize current user from Supabase Auth
-  const currentUser = useMemo(() => {
-    if (!userRolesData) return undefined;
+  const currentUser = useMemo((): UserData | undefined => {
+    if (!userRolesData) return undefined
     return {
       uid: userRolesData.user_id,
-      name: userRolesData.personal_info?.full_name || userRolesData.username,
+      name: userRolesData.personal_info?.full_name || userRolesData.username || 'Unknown User',
       avatar: userRolesData.personal_info?.profile_image || '/placeholder-avatar.jpg',
-      email: userRolesData.email,
-      role: userRolesData.current_role,
-    };
-  }, [userRolesData]);
+      email: userRolesData.email || '',
+      role: userRolesData.current_role || 'user',
+    }
+  }, [userRolesData])
 
   // Memoize post owner check
   const isPostOwner = useMemo(() => {
-    return currentUser?.uid === post.author_id;
-  }, [currentUser?.uid, post.author_id]);
+    return currentUser?.uid === post.author_id
+  }, [currentUser?.uid, post.author_id])
 
-
-
-  // Stable reference for authentication check
+  // Authentication check
   const checkAuthentication = useCallback(() => {
     if (!isAuthenticated || !currentUser) {
-      // You may want to route to sign-in here if needed
-      toast.warning("Please login first");
-      return false;
+      toast.warning("Please login first")
+      return false
     }
-    return true;
-  }, [isAuthenticated, currentUser]);
+    return true
+  }, [isAuthenticated, currentUser])
 
-  // Memoize formatTimeAgo function
+  // Format time ago
   const formatTimeAgo = useCallback((date: Date | string) => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    const dateObj = typeof date === 'string' ? new Date(date) : date
     const now = new Date()
     const diffInHours = Math.floor((now.getTime() - dateObj.getTime()) / (1000 * 60 * 60))
 
@@ -72,8 +99,8 @@ const PostCard = memo(({ post, onSelect }: PostCardProps) => {
     return dateObj.toLocaleDateString()
   }, [])
 
-  // Stable dialog handlers
-  const handleCloseDialog = useCallback(() => {
+  // Dialog handlers
+  const handleCloseImageDialog = useCallback(() => {
     setIsImageDialogOpen(false)
   }, [])
 
@@ -83,146 +110,70 @@ const PostCard = memo(({ post, onSelect }: PostCardProps) => {
   }, [])
 
   const handleOpenCommentDialog = useCallback(() => {
-    if (!checkAuthentication()) return;
-    console.log('💬 OPENING COMMENT DIALOG:', {
-      postId: post.id,
-      currentUserId: currentUser?.uid,
-      currentUserName: currentUser?.name
-    });
-    setIsCommentDialogOpen(true);
-  }, [checkAuthentication, post.id, currentUser]);
+    if (!checkAuthentication()) return
+    setIsCommentDialogOpen(true)
+  }, [checkAuthentication])
 
   const handleCloseCommentDialog = useCallback(() => {
-    setIsCommentDialogOpen(false);
-  }, []);
+    setIsCommentDialogOpen(false)
+  }, [])
 
-  // Handle comment submission
-  const handleComment = useCallback(async (postId: string, comment: { content: string; images?: string[] }) => {
-    if (!checkAuthentication()) return;
-
-    try {
-      // Prepare comment data in the correct format for backend
-      const commentData = {
-        post_id: postId,
-        parent_comment_id: null, // For top-level comments
-        commenter: {
-          user_id: currentUser?.uid || '',
-          username: currentUser?.name || '',
-          user_avatar_url: currentUser?.avatar || '',
-        },
-        comment: {
-          content: comment.content,
-          images: comment.images || [],
-        },
-      };
-
-      console.log('💬 COMMENT DATA FOR BACKEND:', commentData);
-
-      // TODO: Implement comment posting logic
-      // const response = await createComment(commentData);
-
-      toast.success('Comment posted successfully!');
-
-      // Close the dialog after successful comment
-      handleCloseCommentDialog();
-
-    } catch (error) {
-      console.error('❌ COMMENT POSTING FAILED:', error);
-      toast.error('Failed to post comment. Please try again.');
-    }
-  }, [checkAuthentication, currentUser, handleCloseCommentDialog]);
-
-  // Handle comment like
-  const handleCommentLike = useCallback(async (commentId: string) => {
-    if (!checkAuthentication()) return;
-
-    try {
-      console.log('👍 COMMENT LIKE:', {
-        commentId,
-        userId: currentUser?.uid,
-        userName: currentUser?.name
-      });
-
-      // TODO: Implement comment like logic
-      // await likeComment({ commentId, userId: currentUser?.uid });
-
-    } catch (error) {
-      console.error('❌ COMMENT LIKE FAILED:', error);
-      toast.error('Failed to like comment. Please try again.');
-    }
-  }, [checkAuthentication, currentUser]);
-
-  // Optimized delete handler using useDeletePostById
+  // Delete post handler
   const handleDeletePost = useCallback(async (id: string) => {
     if (!checkAuthentication()) return
-    console.log('🗑️ DELETING POST:', {
-      postId: id,
-      currentUserId: currentUser?.uid,
-      currentUserName: currentUser?.name,
-      isPostOwner: isPostOwner
-    });
     try {
       // TODO: Implement post deletion logic
+      console.log('🗑️ DELETING POST:', id)
     } catch (error: any) {
-      // Error handled by hook toast
+      console.error('Failed to delete post:', error)
+      toast.error('Failed to delete post')
     }
-  }, [checkAuthentication, currentUser, isPostOwner])
+  }, [checkAuthentication])
 
   // Handle like functionality
   const handleLike = useCallback(async () => {
-    if (!checkAuthentication()) return
+    if (!checkAuthentication() || !currentUser) return
 
-
-    // Prepare data for backend in the correct format
+    const action = localLikeState.isLiked ? "unliked" : "liked"
     const likeData = {
-      action: localLikeState.isLiked ? "unliked" : "liked",
+      action,
       borrower: {
-        uid: currentUser?.uid || '',
-        name: currentUser?.name || '',
-        email: currentUser?.email || '',
-        avatarUrl: currentUser?.avatar || undefined
+        uid: currentUser.uid,
+        name: currentUser.name,
+        email: currentUser.email,
+        avatarUrl: currentUser.avatar,
       },
       postId: post.id,
       postAuthor: post.author_id,
-      timestamp: new Date().toISOString()
-    };
+    }
 
-    console.log("sss", likeData)
+    // Optimistic UI update
+    const previousState = { ...localLikeState }
+    setLocalLikeState(prev => ({
+      isLiked: !prev.isLiked,
+      likes: prev.isLiked ? Math.max(0, prev.likes - 1) : prev.likes + 1
+    }))
 
-
-    setIsLiking(true)
     try {
-      // Optimistic update
-      setLocalLikeState(prev => ({
-        isLiked: !prev.isLiked,
-        likes: prev.isLiked ? prev.likes - 1 : prev.likes + 1
-      }))
-
-      // TODO: Implement actual like API call here
-      // await heartCommunityPost(likeData)
-
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300))
-
+      await likePost(likeData)
+      refetch?.()
     } catch (error) {
       // Revert optimistic update on error
-      setLocalLikeState(prev => ({
-        isLiked: !prev.isLiked,
-        likes: prev.isLiked ? prev.likes + 1 : prev.likes - 1
-      }))
-      console.error('❌ LIKE ACTION FAILED:', error);
-      toast.error("Failed to like post")
-    } finally {
-      setIsLiking(false)
+      setLocalLikeState(previousState)
     }
-  }, [checkAuthentication, post.id, post.author_id, post.author_name, currentUser, localLikeState])
+  }, [checkAuthentication, currentUser, post.id, post.author_id, localLikeState, likePost, refetch])
 
-  // Memoize author name fallback
+  // Author fallback initials
   const authorFallback = useMemo(() => {
-    return post.author_name.split(' ').map((n: any) => n[0]).join('').toUpperCase()
+    return post.author_name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }, [post.author_name])
 
-  // Convert any to MarketPlacePostDataType for CommentDialog
+  // Prepare post data for CommentDialog
   const postForCommentDialog = useMemo(() => ({
     id: post.id,
     content: post.content,
@@ -236,17 +187,53 @@ const PostCard = memo(({ post, onSelect }: PostCardProps) => {
       name: post.author_name,
       avatar: post.author_avatar,
       role: post.author_role
-    }
-  }), [post]);
+    } as PostAuthor
+  }), [post])
 
-  // Only call onSelect when clicking the card background, not interactive elements
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent selection if clicking on a button, link, dropdown, or menu item
-    if ((e.target as HTMLElement).closest('button, a, [role="menuitem"], [role="dialog"], [tabindex="0"]')) {
-      return;
+  // Handle card click (avoid triggering on interactive elements)
+  const handleCardClick = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, a, [role="menuitem"], [role="dialog"]')) {
+      return
     }
-    onSelect?.(post);
-  };
+    onSelect?.(post)
+  }, [onSelect, post])
+
+  // Image grid layout
+  const renderImages = useMemo(() => {
+    const imageCount = post.images?.length || 0
+    if (imageCount === 0) return null
+
+    if (imageCount === 1) {
+      return (
+        <div
+          className="cursor-pointer h-[400px] w-full"
+          onClick={() => handleOpenImageDialog(0)}
+        >
+          <OptimizedPostImage src={post.images![0] as string} alt="Post image" index={0} />
+        </div>
+      )
+    }
+
+    // Multiple images grid
+    return (
+      <div className="grid grid-cols-2 gap-2 h-[400px]">
+        {post.images!.slice(0, 4).map((img, idx) => (
+          <div
+            key={idx}
+            className={`cursor-pointer relative ${idx === 0 ? 'row-span-2 col-span-2 h-[400px]' : 'h-[196px]'}`}
+            onClick={() => handleOpenImageDialog(idx)}
+          >
+            <OptimizedPostImage src={img} alt={`Post image ${idx + 1}`} index={idx} />
+            {idx === 3 && imageCount > 4 && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                <span className="text-white font-semibold text-lg">+{imageCount - 4} more</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }, [post.images, handleOpenImageDialog])
 
   return (
     <>
@@ -312,23 +299,17 @@ const PostCard = memo(({ post, onSelect }: PostCardProps) => {
             </DropdownMenu>
           </div>
         </CardHeader>
-
         <CardContent className="pt-0">
           <p className="text-sm mb-4 whitespace-pre-wrap break-words">{post.content}</p>
 
           {post.images && post.images.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {post.images.map((img: string, idx: number) => (
-                <div key={idx} onClick={() => handleOpenImageDialog(idx)} className="cursor-pointer">
-                  <OptimizedPostImage src={img} alt={`Post image ${idx + 1}`} index={idx} />
-                </div>
-              ))}
+            <div className="mb-4">
+              {renderImages}
             </div>
           )}
 
           <div className="flex items-center justify-between mt-4 pt-4 border-t">
             <div className="flex items-center space-x-6">
-              {/* Heart Button */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -339,18 +320,20 @@ const PostCard = memo(({ post, onSelect }: PostCardProps) => {
                   : 'text-muted-foreground hover:text-red-500'
                   }`}
               >
-                <Heart
-                  className={`h-5 w-5 transition-all duration-200 ${localLikeState.isLiked
-                    ? 'fill-current scale-110'
-                    : 'hover:scale-110'
-                    }`}
-                />
+                {isLiking ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Heart
+                    className={`h-5 w-5 transition-all duration-200 ${localLikeState.isLiked
+                      ? 'fill-current scale-110'
+                      : 'hover:scale-110'
+                      }`}
+                  />
+                )}
                 <span className="text-sm font-medium">
                   {localLikeState.likes > 0 ? localLikeState.likes : ''}
                 </span>
               </Button>
-
-              {/* Comment Button */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -368,31 +351,26 @@ const PostCard = memo(({ post, onSelect }: PostCardProps) => {
         </CardContent>
       </Card>
 
-      {/* Image Dialog */}
       {post.images && post.images.length > 0 && (
         <ImageDialog
-          images={post.images as string[]}
+          images={post.images}
           isOpen={isImageDialogOpen}
-          onClose={handleCloseDialog}
+          onClose={handleCloseImageDialog}
           initialIndex={selectedImageIndex}
         />
       )}
 
-      {/* Comment Dialog */}
       <CommentDialog
         post={postForCommentDialog}
         isOpen={isCommentDialogOpen}
         onClose={handleCloseCommentDialog}
-        onComment={handleComment}
-        onCommentLike={handleCommentLike}
-        comments={[]} // TODO: Fetch comments for this post
         formatTimeAgo={formatTimeAgo}
         checkAuthentication={checkAuthentication}
+        refetch={refetch}
       />
     </>
   )
 })
 
 PostCard.displayName = 'PostCard'
-
 export default PostCard
