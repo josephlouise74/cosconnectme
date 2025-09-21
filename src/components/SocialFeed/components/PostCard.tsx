@@ -250,7 +250,7 @@ const PostCard = memo(({ post, onSelect, refetch }: PostCardProps) => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center space-x-2">
                   <Link
-                    href={`/community/${post.id}${currentUser?.uid ? `?userId=${currentUser.uid}&author_id=${post.author_id}` : ''}`}
+                    href={`/profile/${post.author_name}?role=${post.author_role}&id=${post.author_id}`}
                     className="font-semibold text-sm truncate hover:underline"
                   >
                     {post.author_name}
