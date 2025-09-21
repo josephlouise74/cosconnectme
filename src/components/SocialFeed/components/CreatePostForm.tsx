@@ -1,10 +1,11 @@
 "use client"
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel, FormDescription } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { useCreatePost } from '@/lib/api/communityApi'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,7 +18,8 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 const postFormSchema = z.object({
-  content: z.string().min(1, 'Post content cannot be empty').max(500, 'Post cannot exceed 500 characters')
+  content: z.string().min(1, 'Post content cannot be empty').max(500, 'Post cannot exceed 500 characters'),
+  isForSale: z.boolean().optional().default(false)
 })
 
 type PostFormValues = z.infer<typeof postFormSchema>
@@ -31,11 +33,13 @@ const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
   const router = useRouter()
 
   const form = useForm<PostFormValues>({
-    resolver: zodResolver(postFormSchema),
+    resolver: zodResolver(postFormSchema as any),
     defaultValues: {
-      content: ''
+      content: '',
+      isForSale: false
     }
   })
+
 
   const { userRolesData, isAuthenticated } = useSupabaseAuth()
   const { createPost, isLoading } = useCreatePost()
@@ -82,6 +86,7 @@ const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
   const onSubmit = async (values: PostFormValues) => {
     console.log('Form submission started with values:', {
       content: values.content,
+      isForSale: values.isForSale,
       imageCount: uploadedImageUrls.length
     });
 
@@ -95,6 +100,7 @@ const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
     try {
       const prepareData = {
         content: values.content,
+        isForSale: values.isForSale,
         images: uploadedImageUrls,
         author: {
           id: userRolesData?.user_id,
@@ -209,6 +215,29 @@ const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="isForSale"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        This post is for selling
+                      </FormLabel>
+                      <FormDescription>
+                        Enable if you're selling something in this post
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
               {uploadedImageUrls.length > 0 && (
                 <div className="w-full">

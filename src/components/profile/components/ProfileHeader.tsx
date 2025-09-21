@@ -1,6 +1,5 @@
 // ProfileHeader.tsx
 "use client"
-
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,12 +20,12 @@ import {
     XCircle
 } from 'lucide-react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'
 import { useCallback, useReducer } from 'react'
+// Import the SendMessageModal
+import SendMessageModal from './SendMessageModal'; // Adjust the path if needed
 
 // Import the types
-
 // Define the processed profile data type
 interface ProcessedProfileData {
     type: 'business' | 'user'
@@ -40,14 +39,13 @@ interface ProcessedProfileData {
         has_business_info?: boolean
     }
 }
-
 interface ProfileHeaderProps {
     profileData: ProcessedProfileData
     role: 'borrower' | 'lender'
     isOwnProfile?: boolean
     onEditProfile?: () => void
+    userRolesData?: any
 }
-
 // Define action types
 type ProfileAction =
     | { type: 'SET_COVER_PHOTO'; payload: { file: File | null; preview: string | null } }
@@ -55,30 +53,30 @@ type ProfileAction =
     | { type: 'TOGGLE_COVER_DIALOG'; payload: boolean }
     | { type: 'TOGGLE_AVATAR_DIALOG'; payload: boolean }
     | { type: 'SET_LOADING'; payload: boolean }
+    | { type: 'TOGGLE_SEND_MESSAGE_DIALOG'; payload: boolean }
     | { type: 'RESET_STATE' }
-
 // Define state type
 interface ProfileState {
     isEditCoverOpen: boolean
     isEditAvatarOpen: boolean
+    isSendMessageOpen: boolean
     coverPhotoFile: File | null
     avatarFile: File | null
     coverPhotoPreview: string | null
     avatarPreview: string | null
     isLoading: boolean
 }
-
 // Initial state
 const initialState: ProfileState = {
     isEditCoverOpen: false,
     isEditAvatarOpen: false,
+    isSendMessageOpen: false,
     coverPhotoFile: null,
     avatarFile: null,
     coverPhotoPreview: null,
     avatarPreview: null,
     isLoading: false
 }
-
 // Reducer function
 function profileReducer(state: ProfileState, action: ProfileAction): ProfileState {
     switch (action.type) {
@@ -109,22 +107,26 @@ function profileReducer(state: ProfileState, action: ProfileAction): ProfileStat
                 ...state,
                 isLoading: action.payload
             }
+        case 'TOGGLE_SEND_MESSAGE_DIALOG':
+            return {
+                ...state,
+                isSendMessageOpen: action.payload
+            }
         case 'RESET_STATE':
             return initialState
         default:
             return state
     }
 }
-
 const ProfileHeader = ({
     profileData,
     role,
     isOwnProfile = false,
-    onEditProfile
+    onEditProfile,
+    userRolesData
 }: ProfileHeaderProps) => {
     const router = useRouter();
     const [state, dispatch] = useReducer(profileReducer, initialState)
-
     // Extract data based on profile type
     const getProfileInfo = () => {
         if (role === 'lender' && profileData.type === 'business' && profileData.business) {
@@ -159,12 +161,9 @@ const ProfileHeader = ({
                 location: profileData.personal?.addresses?.[0]?.full_address
             }
         }
-
         return null
     }
-
     const profileInfo = getProfileInfo()
-
     // Get initials for avatar fallback
     const getInitials = () => {
         if (!profileInfo?.name) return 'U'
@@ -175,17 +174,12 @@ const ProfileHeader = ({
             .toUpperCase()
             .slice(0, 2)
     }
-
+    // Updated handleMessageClick: Now opens the send message dialog
     const handleMessageClick = () => {
-        try {
-            const username = profileData.user?.username || '';
-            console.log('Initiating conversation with:', username);
-            router.push(`/messages/${username}`);
-        } catch (error) {
-
-        }
+        dispatch({ type: 'TOGGLE_SEND_MESSAGE_DIALOG', payload: true })
     };
 
+    console.log("userRolesData 2222", userRolesData)
     // Handle cover photo selection
     const handleCoverPhotoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -197,7 +191,6 @@ const ProfileHeader = ({
             })
         }
     }, [])
-
     // Handle avatar selection
     const handleAvatarSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -209,7 +202,6 @@ const ProfileHeader = ({
             })
         }
     }, [])
-
     // Handle uploads
     const handleCoverPhotoUpload = useCallback(async () => {
         try {
@@ -222,7 +214,6 @@ const ProfileHeader = ({
             dispatch({ type: 'SET_LOADING', payload: false })
         }
     }, [state.coverPhotoFile])
-
     const handleAvatarUpload = useCallback(async () => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true })
@@ -234,7 +225,6 @@ const ProfileHeader = ({
             dispatch({ type: 'SET_LOADING', payload: false })
         }
     }, [state.avatarFile])
-
     if (!profileInfo) {
         return (
             <div className="flex justify-center items-center h-64 bg-gray-50 dark:bg-gray-900 rounded-lg">
@@ -244,7 +234,6 @@ const ProfileHeader = ({
             </div>
         )
     }
-
     return (
         <div className="w-full">
             {/* Cover Photo Section */}
@@ -272,7 +261,6 @@ const ProfileHeader = ({
                             <p className="text-gray-500 dark:text-gray-400 text-sm">No cover photo added yet</p>
                         </div>
                     )}
-
                     {/* Cover Photo Edit Button */}
                     {isOwnProfile && (
                         <div className="absolute top-4 right-4">
@@ -289,7 +277,6 @@ const ProfileHeader = ({
                     )}
                 </div>
             </div>
-
             {/* Profile Info Section */}
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col">
@@ -312,7 +299,6 @@ const ProfileHeader = ({
                                             {getInitials()}
                                         </AvatarFallback>
                                     </Avatar>
-
                                     {/* Avatar Edit Button */}
                                     {isOwnProfile && (
                                         <Button
@@ -326,7 +312,6 @@ const ProfileHeader = ({
                                     )}
                                 </motion.div>
                             </div>
-
                             {/* Name and Info */}
                             <div className="text-center md:text-left space-y-3">
                                 {/* Name and Verification */}
@@ -338,11 +323,9 @@ const ProfileHeader = ({
                                         <CheckCircle className="h-6 w-6 text-blue-500" />
                                     )}
                                 </div>
-
                                 <p className="text-gray-500 dark:text-gray-400 text-lg">
                                     {profileInfo.username}
                                 </p>
-
                                 {/* Role and Business Type Badges */}
                                 <div className="flex justify-center md:justify-start items-center gap-2 flex-wrap">
                                     <Badge
@@ -352,13 +335,11 @@ const ProfileHeader = ({
                                         {role === 'lender' ? <Building className="h-3 w-3" /> : <Users className="h-3 w-3" />}
                                         {role === 'lender' ? 'Business' : 'Individual'}
                                     </Badge>
-
                                     {role === 'lender' && profileInfo.businessType && (
                                         <Badge variant="outline">
                                             {profileInfo.businessType}
                                         </Badge>
                                     )}
-
                                     <Badge
                                         variant={profileInfo.isVerified ? 'default' : 'destructive'}
                                         className="flex items-center gap-1"
@@ -371,7 +352,6 @@ const ProfileHeader = ({
                                         {profileInfo.status}
                                     </Badge>
                                 </div>
-
                                 {/* Contact Info */}
                                 <div className="flex justify-center md:justify-start items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                                     {profileInfo.email && (
@@ -393,17 +373,14 @@ const ProfileHeader = ({
                                         <span>Joined {new Date(profileInfo.joinDate).toLocaleDateString()}</span>
                                     </div>
                                 </div>
-
                                 {/* Bio */}
                                 {profileInfo.bio && (
                                     <p className="text-gray-700 dark:text-gray-300 max-w-md text-center md:text-left">
                                         {profileInfo.bio}
                                     </p>
                                 )}
-
                             </div>
                         </div>
-
                         {/* Action Buttons */}
                         <div className="flex items-center gap-3 flex-wrap justify-center">
                             {isOwnProfile ? (
@@ -418,7 +395,6 @@ const ProfileHeader = ({
                                 </Button>
                             ) : (
                                 <>
-
 
                                     {/* Message Button */}
                                     <Button
@@ -435,7 +411,6 @@ const ProfileHeader = ({
                     </div>
                 </div>
             </div>
-
             {/* Cover Photo Upload Dialog */}
             {isOwnProfile && (
                 <Dialog open={state.isEditCoverOpen} onOpenChange={(open) => dispatch({ type: 'TOGGLE_COVER_DIALOG', payload: open })}>
@@ -443,7 +418,6 @@ const ProfileHeader = ({
                         <DialogHeader>
                             <DialogTitle>Update Cover Photo</DialogTitle>
                         </DialogHeader>
-
                         <div className="space-y-4 mt-4">
                             {state.coverPhotoPreview && (
                                 <div className="w-full h-48 rounded-md overflow-hidden">
@@ -456,7 +430,6 @@ const ProfileHeader = ({
                                     />
                                 </div>
                             )}
-
                             <div className="flex items-center justify-between">
                                 <label className="cursor-pointer">
                                     <Input
@@ -470,7 +443,6 @@ const ProfileHeader = ({
                                         <span>Select Image</span>
                                     </div>
                                 </label>
-
                                 <Button
                                     onClick={handleCoverPhotoUpload}
                                     disabled={!state.coverPhotoFile || state.isLoading}
@@ -482,7 +454,6 @@ const ProfileHeader = ({
                     </DialogContent>
                 </Dialog>
             )}
-
             {/* Avatar Upload Dialog */}
             {isOwnProfile && (
                 <Dialog open={state.isEditAvatarOpen} onOpenChange={(open) => dispatch({ type: 'TOGGLE_AVATAR_DIALOG', payload: open })}>
@@ -490,7 +461,6 @@ const ProfileHeader = ({
                         <DialogHeader>
                             <DialogTitle>Update Profile Picture</DialogTitle>
                         </DialogHeader>
-
                         <div className="space-y-4 mt-4">
                             {state.avatarPreview && (
                                 <div className="flex justify-center">
@@ -505,7 +475,6 @@ const ProfileHeader = ({
                                     </div>
                                 </div>
                             )}
-
                             <div className="flex items-center justify-between">
                                 <label className="cursor-pointer">
                                     <Input
@@ -519,7 +488,6 @@ const ProfileHeader = ({
                                         <span>Select Image</span>
                                     </div>
                                 </label>
-
                                 <Button
                                     onClick={handleAvatarUpload}
                                     disabled={!state.avatarFile || state.isLoading}
@@ -531,8 +499,19 @@ const ProfileHeader = ({
                     </DialogContent>
                 </Dialog>
             )}
+            {/* Send Message Dialog */}
+            {!isOwnProfile && (
+                <SendMessageModal
+                    isOpen={state.isSendMessageOpen}
+                    onClose={() => dispatch({ type: 'TOGGLE_SEND_MESSAGE_DIALOG', payload: false })}
+                    recipientName={profileInfo.name}
+                    recipientUsername={profileData.user?.username || ''}
+                    recipientId={profileData.user?.id || ''}
+                    senderId={userRolesData?.user_id || ''}
+                    senderUsername={userRolesData?.username || ''}
+                />
+            )}
         </div>
     )
 }
-
 export default ProfileHeader

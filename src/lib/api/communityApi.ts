@@ -111,9 +111,10 @@ export const useCreatePost = () => {
     };
 };
 
+// src/hooks/useGetAllPosts.ts
 interface GetAllPostsParams {
     limit?: number;
-    cursor?: any;
+    page?: number; // backend expects page, not cursor
 }
 
 // Get All Posts Hook
@@ -125,16 +126,17 @@ export const useGetAllPosts = (params?: GetAllPostsParams) => {
             if (params?.limit) {
                 queryParams.append('limit', params.limit.toString());
             }
-            if (params?.cursor) {
-                queryParams.append('cursor', params.cursor);
+            if (params?.page) {
+                queryParams.append('page', params.page.toString());
             }
 
-            const response = await axiosApiClient.get<AllPostsResponse>(`/community/get-all-posts${queryParams.toString() ? '?' + queryParams.toString() : ''}`);
+            const url = `/community/get-all-posts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+
+            const response = await axiosApiClient.get<AllPostsResponse>(url);
 
             return response.data;
         } catch (error) {
-            let message = "Failed to fetch posts";
-
+            const message = "Failed to fetch posts";
             toast.error(message);
             throw error;
         }
@@ -156,6 +158,7 @@ export const useGetAllPosts = (params?: GetAllPostsParams) => {
         isRefetching: query.isRefetching,
     };
 };
+
 
 // ✅ Comment on Post
 export const useCommentOnPost = () => {
