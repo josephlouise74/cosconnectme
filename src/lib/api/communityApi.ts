@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { axiosApiClient } from "./axiosApiClient";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AllPostsResponse } from "../types/community/all-posts";
 import axios from "axios";
 
@@ -291,3 +291,33 @@ export const useGetCommentsOnPost = (
 };
 
 
+export const useDeletePostById = () => {
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: async (post_id: string) => {
+            if (!post_id) {
+                throw new Error('Post ID is required');
+            }
+
+            const response = await axiosApiClient.delete(`/community/delete-post/${post_id}`);
+            return response.data;
+        },
+        onSuccess: () => {
+            // Invalidate and refetch posts to update the UI
+            queryClient.invalidateQueries({ queryKey: ['community-posts'] });
+            // You might want to show a success toast here
+            toast.success('Post deleted successfully');
+        },
+        onError: (error: any) => {
+            console.error('Error deleting post:', error);
+            toast.error(error.response?.data?.message || 'Failed to delete post');
+        }
+    });
+
+    return {
+        deletePost: mutation.mutate,
+        isDeleting: mutation.isPending,
+        error: mutation.error
+    };
+};
