@@ -5,9 +5,10 @@ import { BorrowerProfileResponse } from "../types/borrowerType";
 import { SwitchRoleResponse, UpdatePersonalInfoResponse, UserPersonalInfoFormData, UserRolesResponse, UserRolesResponseData } from "../types/userType";
 import { axiosApiClient } from "./axiosApiClient";
 import { toast } from "sonner";
+import { BusinessResponse, UserResponse } from "../types/profile/get-profile-data";
 
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v2';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 
 export const useGetUserRoles = (userId: string, enabled = true) => {
@@ -274,3 +275,65 @@ export const useSwitchRole = () => {
         reset: mutation.reset,
     }
 }
+
+
+// Union type for the combined response
+export type UserDataResponse = BusinessResponse | UserResponse;
+
+/**
+ * Custom hook to fetch user profile data by user_id and role
+ * @param user_id - The user ID to fetch data for
+ * @param role - The role context ('borrower' or 'lender')
+ * @returns Profile data, loading state, error state and refetch function
+ */
+export const useGetUserDataByIdWithRole = (user_id: string, role: 'borrower' | 'lender') => {
+    const getUserDataByIdWithRole = async (): Promise<UserDataResponse> => {
+        if (!user_id || !role) {
+            throw new Error("Both user_id and role are required to fetch profile data");
+        }
+        console.log("Fetching profile data for user_id:", user_id, "and role:", role);
+        try {
+            const response = await axiosApiClient.get<UserDataResponse>(
+                `/user/profile`,
+                {
+                    params: {
+                        user_id,
+                        role
+                    }
+                }
+            );
+
+            if (!response.data.success) {
+                throw new Error('Failed to fetch profile data');
+            }
+
+            return response.data;
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                const message = error.response?.data?.message || error.message;
+                throw new Error(`Failed to fetch profile data: ${message}`);
+            }
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error('An unexpected error occurred while fetching profile data');
+        }
+    };
+
+    const query = useQuery({
+        queryKey: ['userDataByIdWithRole', user_id, role],
+        queryFn: getUserDataByIdWithRole,
+        enabled: Boolean(user_id && role),
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+    });
+
+    return {
+        data: query.data,
+        isLoading: query.isLoading,
+        isError: query.isError,
+        error: query.error,
+        refetch: query.refetch,
+        isFetching: query.isFetching,
+    };
+};

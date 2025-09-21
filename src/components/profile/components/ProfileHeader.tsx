@@ -1,17 +1,52 @@
+// ProfileHeader.tsx
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import { BusinessResponse, UserResponse } from '@/lib/types/profile/get-profile-data'
 import { motion } from 'framer-motion'
-import { Camera, Edit, UserPlus, Users } from 'lucide-react'
+import {
+    Building,
+    Calendar,
+    Camera,
+    CheckCircle,
+    Edit,
+    Mail,
+    MapPin,
+    MessageCircle,
+    Users,
+    XCircle
+} from 'lucide-react'
 import Image from 'next/image'
-import { useParams } from 'next/navigation'
-import { useCallback, useMemo, useReducer, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation';
+import { useCallback, useReducer } from 'react'
 
-import EditProfileBorrowerDialogSection, { mapUserRolesDataToProfileFormBorrowerValues } from '../EditProfileBorrowerDialogSection'
+// Import the types
+
+// Define the processed profile data type
+interface ProcessedProfileData {
+    type: 'business' | 'user'
+    business?: BusinessResponse['data']['business']
+    user?: UserResponse['data']['user']
+    personal?: UserResponse['data']['personal']
+    metadata: {
+        role: 'borrower' | 'lender'
+        created_at: string
+        updated_at: string
+        has_business_info?: boolean
+    }
+}
+
+interface ProfileHeaderProps {
+    profileData: ProcessedProfileData
+    role: 'borrower' | 'lender'
+    isOwnProfile?: boolean
+    onEditProfile?: () => void
+}
 
 // Define action types
 type ProfileAction =
@@ -81,58 +116,75 @@ function profileReducer(state: ProfileState, action: ProfileAction): ProfileStat
     }
 }
 
-const ProfileHeader = () => {
+const ProfileHeader = ({
+    profileData,
+    role,
+    isOwnProfile = false,
+    onEditProfile
+}: ProfileHeaderProps) => {
+    const router = useRouter();
     const [state, dispatch] = useReducer(profileReducer, initialState)
-    const [isFollowing, setIsFollowing] = useState(false)
-    const [followersCount, setFollowersCount] = useState(1234) // This would come from your API
-    const [followingCount, setFollowingCount] = useState(567) // This would come from your API
 
-    const { username: urlUsername } = useParams()
-    const { isAuthenticated, userRolesData } = useSupabaseAuth()
+    // Extract data based on profile type
+    const getProfileInfo = () => {
+        if (role === 'lender' && profileData.type === 'business' && profileData.business) {
+            const { info } = profileData.business
+            return {
+                name: info.business_name,
+                username: `@${info.business_name.toLowerCase().replace(/\s+/g, '_')}`,
+                email: info.business_email,
+                phone: info.business_phone_number,
+                profileImage: info.business_profile_image,
+                backgroundImage: info.business_background_image,
+                bio: info.business_description,
+                isVerified: info.verification?.is_verified,
+                status: info.verification?.is_verified ? 'verified' : 'pending',
+                joinDate: info.created_at,
+                businessType: info.business_type,
+                location: profileData.business?.addresses?.[0]?.full_address
+            }
+        } else if (role === 'borrower' && profileData.type === 'user' && profileData.user) {
+            const { user } = profileData
+            return {
+                name: user.full_name,
+                username: `@${user.username}`,
+                email: user.email,
+                phone: user.phone_number,
+                profileImage: user.profile_image,
+                backgroundImage: user.profile_background,
+                bio: user.bio,
+                isVerified: user.status === 'verified',
+                status: user.status,
+                joinDate: user.created_at,
+                location: profileData.personal?.addresses?.[0]?.full_address
+            }
+        }
 
-    // Check if the user is viewing their own profile
-    const isOwnProfile = useMemo(() => {
-        return isAuthenticated && userRolesData?.personal_info?.username === urlUsername;
-    }, [isAuthenticated, userRolesData, urlUsername]);
+        return null
+    }
 
-    // Check if the current user is a borrower
-    const isBorrower = useMemo(() => {
-        return userRolesData?.current_role === 'borrower';
-    }, [userRolesData]);
-
-    // Check if the profile being viewed belongs to a borrower
-    const isViewingBorrowerProfile = useMemo(() => {
-        return userRolesData?.roles?.includes('borrower');
-    }, [userRolesData]);
+    const profileInfo = getProfileInfo()
 
     // Get initials for avatar fallback
-    const getInitials = useMemo(() => {
-        if (!userRolesData?.personal_info?.username) return 'U'
-        return userRolesData.personal_info.username
+    const getInitials = () => {
+        if (!profileInfo?.name) return 'U'
+        return profileInfo.name
             .split(' ')
             .map((name: string) => name[0])
             .join('')
             .toUpperCase()
-    }, [userRolesData?.personal_info?.username])
+            .slice(0, 2)
+    }
 
-    // Handle follow/unfollow
-    const handleFollowToggle = useCallback(async () => {
+    const handleMessageClick = () => {
         try {
-            dispatch({ type: 'SET_LOADING', payload: true })
-
-            // Your follow/unfollow API call would go here
-            // await followUser(urlUsername) or await unfollowUser(urlUsername)
-
-            setIsFollowing(prev => !prev)
-            setFollowersCount(prev => isFollowing ? prev - 1 : prev + 1)
-
-            console.log(isFollowing ? 'Unfollowed user' : 'Followed user')
+            const username = profileData.user?.username || '';
+            console.log('Initiating conversation with:', username);
+            router.push(`/messages/${username}`);
         } catch (error) {
-            console.error('Error toggling follow:', error)
-        } finally {
-            dispatch({ type: 'SET_LOADING', payload: false })
+
         }
-    }, [isFollowing, urlUsername])
+    };
 
     // Handle cover photo selection
     const handleCoverPhotoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,11 +210,10 @@ const ProfileHeader = () => {
         }
     }, [])
 
-    // Handle cover photo upload
+    // Handle uploads
     const handleCoverPhotoUpload = useCallback(async () => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true })
-            // Implementation for cover photo upload would go here
             console.log('Uploading cover photo:', state.coverPhotoFile)
             dispatch({ type: 'TOGGLE_COVER_DIALOG', payload: false })
         } catch (error) {
@@ -172,11 +223,9 @@ const ProfileHeader = () => {
         }
     }, [state.coverPhotoFile])
 
-    // Handle avatar upload
     const handleAvatarUpload = useCallback(async () => {
         try {
             dispatch({ type: 'SET_LOADING', payload: true })
-            // Implementation for avatar upload would go here
             console.log('Uploading avatar:', state.avatarFile)
             dispatch({ type: 'TOGGLE_AVATAR_DIALOG', payload: false })
         } catch (error) {
@@ -186,16 +235,11 @@ const ProfileHeader = () => {
         }
     }, [state.avatarFile])
 
-    // Only show edit button if user is viewing their own profile and is a borrower and userRolesData exists
-    const showEditProfile = isOwnProfile && isBorrower && !!userRolesData;
-    const profileFormValues: any | null = userRolesData ? mapUserRolesDataToProfileFormBorrowerValues(userRolesData) : null;
-
-    // If not viewing a borrower profile, show message
-    if (!isViewingBorrowerProfile) {
+    if (!profileInfo) {
         return (
             <div className="flex justify-center items-center h-64 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <p className="text-gray-500 dark:text-gray-400 text-center">
-                    This profile is not available or belongs to a different user type.
+                    Profile information not available.
                 </p>
             </div>
         )
@@ -204,24 +248,22 @@ const ProfileHeader = () => {
     return (
         <div className="w-full">
             {/* Cover Photo Section */}
-            <div className='w-full h-96'>
-                <div className="max-w-6xl mx-auto h-96 bg-gradient-to-br  from-blue-100 to-indigo-200 dark:from-gray-800 dark:to-gray-700 overflow-hidden rounded-lg">
+            <div className='w-full h-96 relative'>
+                <div className="max-w-6xl mx-auto h-96 bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-gray-800 dark:to-gray-700 overflow-hidden rounded-lg relative">
                     {state.coverPhotoPreview ? (
                         <Image
                             src={state.coverPhotoPreview}
                             alt="Cover photo"
-                            width={1200}
-                            height={400}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                             priority
                         />
-                    ) : userRolesData?.personal_info?.profile_background ? (
+                    ) : profileInfo.backgroundImage ? (
                         <Image
-                            src={userRolesData.personal_info.profile_background}
+                            src={profileInfo.backgroundImage}
                             alt="Cover photo"
-                            width={1200}
-                            height={400}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                             priority
                         />
                     ) : (
@@ -232,8 +274,8 @@ const ProfileHeader = () => {
                     )}
 
                     {/* Cover Photo Edit Button */}
-                    {isOwnProfile && isBorrower && (
-                        <div className="flex justify-end p-4">
+                    {isOwnProfile && (
+                        <div className="absolute top-4 right-4">
                             <Button
                                 variant="secondary"
                                 size="sm"
@@ -252,29 +294,27 @@ const ProfileHeader = () => {
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col">
                     {/* Avatar and Action Buttons Row */}
-                    <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between py-6 border-b border-gray-200 dark:border-gray-700">
-                        <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 mb-4 sm:mb-0">
+                    <div className="flex flex-col lg:flex-row items-center lg:items-end justify-between py-6 border-b border-gray-200 dark:border-gray-700 gap-6">
+                        <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
                             {/* Avatar */}
-                            <div className="flex flex-col items-center">
+                            <div className="flex flex-col items-center relative">
                                 <motion.div
                                     whileHover={{ scale: 1.05 }}
                                     transition={{ type: "spring", stiffness: 300, damping: 15 }}
                                     className="relative"
                                 >
                                     <Avatar className="h-40 w-40 border-4 border-white dark:border-gray-800 shadow-lg">
-                                        {(userRolesData?.personal_info?.profile_image || state.avatarPreview) ? (
-                                            <AvatarImage
-                                                src={state.avatarPreview || userRolesData?.personal_info?.profile_image || ''}
-                                                alt={userRolesData?.personal_info?.username || 'User'}
-                                            />
-                                        ) : (
-                                            <AvatarFallback className="text-4xl bg-gradient-to-br from-rose-500 to-pink-600 text-white">
-                                                {getInitials}
-                                            </AvatarFallback>
-                                        )}
+                                        <AvatarImage
+                                            src={state.avatarPreview || profileInfo.profileImage || ''}
+                                            alt={profileInfo.name}
+                                        />
+                                        <AvatarFallback className="text-4xl bg-gradient-to-br from-rose-500 to-pink-600 text-white">
+                                            {getInitials()}
+                                        </AvatarFallback>
                                     </Avatar>
+
                                     {/* Avatar Edit Button */}
-                                    {isOwnProfile && isBorrower && (
+                                    {isOwnProfile && (
                                         <Button
                                             variant="secondary"
                                             size="icon"
@@ -287,95 +327,109 @@ const ProfileHeader = () => {
                                 </motion.div>
                             </div>
 
-                            {/* Name and Stats */}
-                            <div className="text-center sm:text-left">
-                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                                    {userRolesData?.personal_info?.full_name || userRolesData?.personal_info?.username || 'User'}
-                                </h1>
-                                <p className="text-gray-500 dark:text-gray-400 text-lg mt-1">
-                                    @{userRolesData?.personal_info?.username}
+                            {/* Name and Info */}
+                            <div className="text-center md:text-left space-y-3">
+                                {/* Name and Verification */}
+                                <div className="flex items-center justify-center md:justify-start gap-3">
+                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                                        {profileInfo.name}
+                                    </h1>
+                                    {profileInfo.isVerified && (
+                                        <CheckCircle className="h-6 w-6 text-blue-500" />
+                                    )}
+                                </div>
+
+                                <p className="text-gray-500 dark:text-gray-400 text-lg">
+                                    {profileInfo.username}
                                 </p>
 
-                                {/* Role Badge */}
-                                <div className="flex justify-center sm:justify-start items-center gap-2 mt-2">
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                        {userRolesData?.current_role || 'User'}
-                                    </span>
+                                {/* Role and Business Type Badges */}
+                                <div className="flex justify-center md:justify-start items-center gap-2 flex-wrap">
+                                    <Badge
+                                        variant={role === 'lender' ? 'default' : 'secondary'}
+                                        className="flex items-center gap-1"
+                                    >
+                                        {role === 'lender' ? <Building className="h-3 w-3" /> : <Users className="h-3 w-3" />}
+                                        {role === 'lender' ? 'Business' : 'Individual'}
+                                    </Badge>
+
+                                    {role === 'lender' && profileInfo.businessType && (
+                                        <Badge variant="outline">
+                                            {profileInfo.businessType}
+                                        </Badge>
+                                    )}
+
+                                    <Badge
+                                        variant={profileInfo.isVerified ? 'default' : 'destructive'}
+                                        className="flex items-center gap-1"
+                                    >
+                                        {profileInfo.isVerified ? (
+                                            <CheckCircle className="h-3 w-3" />
+                                        ) : (
+                                            <XCircle className="h-3 w-3" />
+                                        )}
+                                        {profileInfo.status}
+                                    </Badge>
                                 </div>
 
-                                {/* Followers/Following Stats */}
-                                <div className="flex justify-center sm:justify-start items-center gap-6 mt-4">
-                                    <div className="text-center">
-                                        <div className="text-xl font-bold text-gray-900 dark:text-white">
-                                            {followersCount.toLocaleString()}
+                                {/* Contact Info */}
+                                <div className="flex justify-center md:justify-start items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                    {profileInfo.email && (
+                                        <div className="flex items-center gap-1">
+                                            <Mail className="h-4 w-4" />
+                                            <span className="hidden sm:inline">{profileInfo.email}</span>
                                         </div>
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                                            Followers
+                                    )}
+                                    {profileInfo.location && (
+                                        <div className="flex items-center gap-1">
+                                            <MapPin className="h-4 w-4" />
+                                            <span className="hidden sm:inline truncate max-w-48">
+                                                {profileInfo.location}
+                                            </span>
                                         </div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-xl font-bold text-gray-900 dark:text-white">
-                                            {followingCount.toLocaleString()}
-                                        </div>
-                                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                                            Following
-                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-1">
+                                        <Calendar className="h-4 w-4" />
+                                        <span>Joined {new Date(profileInfo.joinDate).toLocaleDateString()}</span>
                                     </div>
                                 </div>
+
+                                {/* Bio */}
+                                {profileInfo.bio && (
+                                    <p className="text-gray-700 dark:text-gray-300 max-w-md text-center md:text-left">
+                                        {profileInfo.bio}
+                                    </p>
+                                )}
+
                             </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap justify-center">
                             {isOwnProfile ? (
                                 // Edit Profile Button for own profile
-                                showEditProfile && profileFormValues && (
-                                    <EditProfileBorrowerDialogSection
-                                        profileData={profileFormValues}
-                                        trigger={
-                                            <Button variant="outline" className="flex items-center gap-2">
-                                                <Edit size={16} />
-                                                Edit Profile
-                                            </Button>
-                                        }
-                                        onProfileUpdate={async (updatedData) => {
-                                            console.log('Profile updated:', updatedData);
-                                        }}
-                                    />
-                                )
-                            ) : (
-                                // Follow/Unfollow Button for other profiles
                                 <Button
-                                    onClick={handleFollowToggle}
-                                    disabled={state.isLoading}
-                                    className={`flex items-center gap-2 min-w-[120px] ${isFollowing
-                                        ? 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                                        }`}
-                                    variant={isFollowing ? "secondary" : "default"}
+                                    variant="outline"
+                                    className="flex items-center gap-2"
+                                    onClick={onEditProfile}
                                 >
-                                    {isFollowing ? (
-                                        <>
-                                            <Users size={16} />
-                                            Following
-                                        </>
-                                    ) : (
-                                        <>
-                                            <UserPlus size={16} />
-                                            Follow
-                                        </>
-                                    )}
+                                    <Edit size={16} />
+                                    Edit Profile
                                 </Button>
-                            )}
+                            ) : (
+                                <>
 
-                            {/* Message Button (for non-own profiles) */}
-                            {!isOwnProfile && (
-                                <Button variant="outline" className="flex items-center gap-2">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                    </svg>
-                                    Message
-                                </Button>
+
+                                    {/* Message Button */}
+                                    <Button
+                                        variant="outline"
+                                        className="flex items-center gap-2"
+                                        onClick={handleMessageClick}
+                                    >
+                                        <MessageCircle className="w-4 h-4" />
+                                        Message
+                                    </Button>
+                                </>
                             )}
                         </div>
                     </div>
@@ -383,7 +437,7 @@ const ProfileHeader = () => {
             </div>
 
             {/* Cover Photo Upload Dialog */}
-            {isOwnProfile && isBorrower && (
+            {isOwnProfile && (
                 <Dialog open={state.isEditCoverOpen} onOpenChange={(open) => dispatch({ type: 'TOGGLE_COVER_DIALOG', payload: open })}>
                     <DialogContent className="sm:max-w-[525px]">
                         <DialogHeader>
@@ -430,7 +484,7 @@ const ProfileHeader = () => {
             )}
 
             {/* Avatar Upload Dialog */}
-            {isOwnProfile && isBorrower && (
+            {isOwnProfile && (
                 <Dialog open={state.isEditAvatarOpen} onOpenChange={(open) => dispatch({ type: 'TOGGLE_AVATAR_DIALOG', payload: open })}>
                     <DialogContent className="sm:max-w-[525px]">
                         <DialogHeader>
