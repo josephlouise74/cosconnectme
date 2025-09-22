@@ -5,7 +5,7 @@ import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth';
 
 import { MessageSideBar } from './MessageSidebar';
 import { MessageBox } from './message-box';
-import { Contact, useGetContacts, useSendMessage } from '@/lib/api/messageApi';
+import { Contact, refetchContacts, useGetContacts, useSendMessage } from '@/lib/api/messageApi';
 
 // Types
 interface Conversation {
@@ -40,7 +40,7 @@ export default function MessageSection() {
     const [activeConversationId, setActiveConversationId] = useState<string | number>("");
     const [messagesData, setMessagesData] = useState<Record<string | number, Message[]>>({}); // Updated to support string IDs
 
-    const { isAuthenticated, user } = useSupabaseAuth();
+    const { user } = useSupabaseAuth();
     const { socket } = useSocket();
     const { sendMessage, isLoading: isSending, isError: isSendError, error: sendError, data: sendData } = useSendMessage();
 
@@ -50,6 +50,10 @@ export default function MessageSection() {
         userId,
         limit: 20, // Default limit, can be adjusted
     });
+    // Add this useEffect to refetch contacts when the component mounts
+    useEffect(() => {
+        refetchContacts(userId);
+    }, [refetchContacts, userId]);  // refetchContacts is stable, but including it in deps is a good practice
 
     // Map fetched contacts to conversations once data is available
     useEffect(() => {
@@ -69,7 +73,7 @@ export default function MessageSection() {
 
             // Set the first conversation as active if none is selected
             if (activeConversationId === "" && mappedConversations.length > 0) {
-                setActiveConversationId(mappedConversations[0]?.id);
+                setActiveConversationId(mappedConversations[0]?.id || "");
             }
         }
     }, [isContactsSuccess, contactsData, userId, activeConversationId]);

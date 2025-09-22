@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { axiosApiClient } from "./axiosApiClient";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AllPostsResponse } from "../types/community/all-posts";
 import axios from "axios";
 
@@ -111,9 +111,10 @@ export const useCreatePost = () => {
     };
 };
 
+// src/hooks/useGetAllPosts.ts
 interface GetAllPostsParams {
     limit?: number;
-    cursor?: any;
+    page?: number; // backend expects page, not cursor
 }
 
 // Get All Posts Hook
@@ -125,16 +126,17 @@ export const useGetAllPosts = (params?: GetAllPostsParams) => {
             if (params?.limit) {
                 queryParams.append('limit', params.limit.toString());
             }
-            if (params?.cursor) {
-                queryParams.append('cursor', params.cursor);
+            if (params?.page) {
+                queryParams.append('page', params.page.toString());
             }
 
-            const response = await axiosApiClient.get<AllPostsResponse>(`/community/get-all-posts${queryParams.toString() ? '?' + queryParams.toString() : ''}`);
+            const url = `/community/get-all-posts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+
+            const response = await axiosApiClient.get<AllPostsResponse>(url);
 
             return response.data;
         } catch (error) {
-            let message = "Failed to fetch posts";
-
+            const message = "Failed to fetch posts";
             toast.error(message);
             throw error;
         }
@@ -156,6 +158,7 @@ export const useGetAllPosts = (params?: GetAllPostsParams) => {
         isRefetching: query.isRefetching,
     };
 };
+
 
 // ✅ Comment on Post
 export const useCommentOnPost = () => {
@@ -288,3 +291,33 @@ export const useGetCommentsOnPost = (
 };
 
 
+export const useDeletePostById = () => {
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: async (post_id: string) => {
+            if (!post_id) {
+                throw new Error('Post ID is required');
+            }
+
+            const response = await axiosApiClient.delete(`/community/delete-post/${post_id}`);
+            return response.data;
+        },
+        onSuccess: () => {
+            // Invalidate and refetch posts to update the UI
+            queryClient.invalidateQueries({ queryKey: ['community-posts'] });
+            // You might want to show a success toast here
+            toast.success('Post deleted successfully');
+        },
+        onError: (error: any) => {
+            console.error('Error deleting post:', error);
+            toast.error(error.response?.data?.message || 'Failed to delete post');
+        }
+    });
+
+    return {
+        deletePost: mutation.mutate,
+        isDeleting: mutation.isPending,
+        error: mutation.error
+    };
+};

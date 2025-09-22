@@ -3,14 +3,11 @@
 
 import { useParams, useSearchParams } from "next/navigation"
 import React, { useMemo } from "react"
-import ProfileSkeletonBorrower from "./components/ProfileSkeletionBorrower"
 import ProfileHeader from "./components/ProfileHeader"
+import ProfileSkeletonBorrower from "./components/ProfileSkeletionBorrower"
 
-import PostCreationCardBorrower from "./components/PostCreationCardBorrower"
-import PostsListBorrower from "./components/PostListBorrower"
-import ImageGalleryBorrower from "./components/ImageGalleryBorrower"
-import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
 import { useGetUserDataByIdWithRole } from "@/lib/api/userApi"
+import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
 import { BusinessResponse, UserResponse } from "@/lib/types/profile/get-profile-data"
 import ProfileAboutCard from "./components/ProfileAboutCardBorrower"
 
@@ -118,7 +115,7 @@ const ProfileSection = () => {
       <ProfileHeader
         profileData={processedProfileData as any}
         role={role}
-
+        userRolesData={userRolesData}
       />
 
       {/* Main Content */}

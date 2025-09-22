@@ -348,23 +348,6 @@ const CommentDialog: React.FC<CommentDialogProps> = ({
                         {/* Comment Form */}
                         <div className="border-t bg-white p-4">
                             <div className="space-y-3">
-                                {/* User Info with Own Post Indicator */}
-                                <div className="flex items-center gap-3">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={replyAvatarUrl} alt={replyName} />
-                                        <AvatarFallback className="text-xs">
-                                            {replyName.split(' ').map((n: any) => n[0]).join('').toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium text-sm">{replyName}</span>
-                                        {isOwnPost && (
-                                            <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-200">
-                                                Commenting on your post
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
 
                                 {/* Comment Input */}
                                 <div className="flex space-x-3">
