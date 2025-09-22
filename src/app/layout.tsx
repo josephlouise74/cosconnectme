@@ -49,10 +49,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Script
+        {/*   <Script
           crossOrigin="anonymous"
           src="//unpkg.com/react-scan/dist/auto.global.js"
-        />
+        /> */}
         <QueryProvider>
           <ThemeProvider
             attribute="class"
