@@ -18,13 +18,7 @@ const Page = () => {
 
   const router = useRouter()
 
-  // Redirect unauthenticated users to login
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/auth/login')
-      return
-    }
-  }, [isAuthenticated, isLoading, router])
+
 
   // Handle user data errors
   useEffect(() => {

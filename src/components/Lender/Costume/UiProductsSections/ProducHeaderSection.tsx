@@ -1,3 +1,6 @@
+
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -7,21 +10,22 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Costume } from "@/lib/api/costumeApi";
 import { FilterX, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface ProductHeaderProps {
     searchQuery: string;
     onSearchChange: (query: string) => void;
+
     categoryFilter: string | null;
     onCategoryFilterChange: (category: string | null) => void;
     categories: string[];
+
     statusFilter: string | null;
     onStatusFilterChange: (status: string | null) => void;
-    genderFilter: string | null;
-    onGenderFilterChange: (gender: string | null) => void;
-    statuses: string[];
-    genders: string[];
+    statuses: Costume["status"][]; // strongly typed from Costume
+
     onResetFilters: () => void;
 }
 
@@ -33,25 +37,23 @@ const ProductHeader = ({
     categories,
     statusFilter,
     onStatusFilterChange,
-    genderFilter,
-    onGenderFilterChange,
     statuses,
-    genders,
-    onResetFilters
+    onResetFilters,
 }: ProductHeaderProps) => {
     const router = useRouter();
 
     const handleAddNew = () => {
-        router.push('/lender/products/create');
+        router.push("/lender/products/create");
     };
 
-    const hasActiveFilters = !!searchQuery ||
-        (categoryFilter && categoryFilter !== 'all') ||
-        (statusFilter && statusFilter !== 'all') ||
-        (genderFilter && genderFilter !== 'all');
+    const hasActiveFilters =
+        !!searchQuery ||
+        (categoryFilter && categoryFilter !== "all") ||
+        (statusFilter && statusFilter !== "all");
 
     return (
         <div className="space-y-4">
+            {/* Header row */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-2xl font-bold tracking-tight">Costumes</h2>
                 <Button onClick={handleAddNew} className="whitespace-nowrap">
@@ -60,7 +62,9 @@ const ProductHeader = ({
                 </Button>
             </div>
 
+            {/* Filters row */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                {/* Search */}
                 <div className="flex-1">
                     <Input
                         placeholder="Search costumes..."
@@ -70,11 +74,14 @@ const ProductHeader = ({
                     />
                 </div>
 
+                {/* Filters */}
                 <div className="flex flex-wrap gap-2">
                     {/* Category Filter */}
                     <Select
                         value={categoryFilter || "all"}
-                        onValueChange={(value) => onCategoryFilterChange(value === "all" ? null : value)}
+                        onValueChange={(value) =>
+                            onCategoryFilterChange(value === "all" ? null : value)
+                        }
                     >
                         <SelectTrigger className="sm:w-[150px]">
                             <SelectValue placeholder="Category" />
@@ -92,7 +99,9 @@ const ProductHeader = ({
                     {/* Status Filter */}
                     <Select
                         value={statusFilter || "all"}
-                        onValueChange={(value) => onStatusFilterChange(value === "all" ? null : value)}
+                        onValueChange={(value) =>
+                            onStatusFilterChange(value === "all" ? null : value)
+                        }
                     >
                         <SelectTrigger className="sm:w-[150px]">
                             <SelectValue placeholder="Status" />
@@ -107,25 +116,7 @@ const ProductHeader = ({
                         </SelectContent>
                     </Select>
 
-                    {/* Gender Filter */}
-                    <Select
-                        value={genderFilter || "all"}
-                        onValueChange={(value) => onGenderFilterChange(value === "all" ? null : value)}
-                    >
-                        <SelectTrigger className="sm:w-[150px]">
-                            <SelectValue placeholder="Gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Genders</SelectItem>
-                            {genders.map((gender) => (
-                                <SelectItem key={gender} value={gender}>
-                                    {gender.charAt(0).toUpperCase() + gender.slice(1)}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-
-                    {/* Reset Filters Button */}
+                    {/* Reset Filters */}
                     {hasActiveFilters && (
                         <Button
                             variant="outline"

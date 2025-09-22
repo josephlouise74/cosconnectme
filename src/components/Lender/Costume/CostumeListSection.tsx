@@ -1,53 +1,48 @@
+// src/components/CostumeListSection.tsx
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { useFetchAllCategories } from "@/lib/apis/categoryApi";
-
-
-import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth';
-
+import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth";
 import { useRouter } from "next/navigation";
 import { Suspense, useCallback, useMemo, useReducer } from "react";
-import ProductHeader from "./UiProductsSections/ProducHeaderSection";
-import ProductDetailDialog from "./UiProductsSections/ProductDetailsDialogSection";
 
-import { useGetAllCreatedCostumeByLenderId } from "@/lib/apis/costumesApiV2";
+import ProductDetailDialog from "./UiProductsSections/ProductDetailsDialogSection";
 import CostumePaginationSection from "./UiProductsSections/CostumePaginationSection";
 import CostumeTableSection from "./UiProductsSections/ProductTableSection";
-import { CostumeItemTypeV2 } from "@/types/costumes/costumeTypeV2";
+import { useGetMyCostumes, Costume } from "@/lib/api/costumeApi";
+import { useFetchAllCategories } from "@/lib/api/categoryApi";
+import ProductHeader from "./UiProductsSections/ProducHeaderSection";
 
-// Updated sort config to match CostumeItemTypeV2
+// Sorting config
 interface SortConfig {
-  key: keyof CostumeItemTypeV2 | 'main_rent_offer' | null;
-  direction: 'asc' | 'desc' | null;
+  key: keyof Costume | "rental_price" | "sale_price" | null;
+  direction: "asc" | "desc" | null;
 }
 
-// Define state interface for type safety
+// Component state
 interface CostumeListState {
   searchQuery: string;
   sortConfig: SortConfig;
   categoryFilter: string | null;
   statusFilter: string | null;
-  genderFilter: string | null;
-  selectedCostume: CostumeItemTypeV2 | null;
+  selectedCostume: Costume | null;
   viewDialog: boolean;
   deleteDialog: boolean;
-  costumeToDelete: CostumeItemTypeV2 | null;
+  costumeToDelete: Costume | null;
   currentPage: number;
   itemsPerPage: number;
 }
 
-// Define action types with proper typing
+// Actions
 type CostumeListAction =
   | { type: "SET_SEARCH_QUERY"; payload: string }
   | { type: "SET_SORT_CONFIG"; payload: SortConfig }
   | { type: "SET_CATEGORY_FILTER"; payload: string | null }
   | { type: "SET_STATUS_FILTER"; payload: string | null }
-  | { type: "SET_GENDER_FILTER"; payload: string | null }
-  | { type: "SET_SELECTED_COSTUME"; payload: CostumeItemTypeV2 | null }
+  | { type: "SET_SELECTED_COSTUME"; payload: Costume | null }
   | { type: "SET_VIEW_DIALOG"; payload: boolean }
   | { type: "SET_DELETE_DIALOG"; payload: boolean }
-  | { type: "SET_COSTUME_TO_DELETE"; payload: CostumeItemTypeV2 | null }
+  | { type: "SET_COSTUME_TO_DELETE"; payload: Costume | null }
   | { type: "SET_CURRENT_PAGE"; payload: number }
   | { type: "SET_ITEMS_PER_PAGE"; payload: number }
   | { type: "RESET_COSTUME_TO_DELETE" }
@@ -58,19 +53,20 @@ const initialState: CostumeListState = {
   searchQuery: "",
   sortConfig: { key: null, direction: null },
   categoryFilter: null,
-
   statusFilter: null,
-  genderFilter: null,
   selectedCostume: null,
   viewDialog: false,
   deleteDialog: false,
   costumeToDelete: null,
   currentPage: 1,
-  itemsPerPage: 10
+  itemsPerPage: 10,
 };
 
-// Reducer function with proper TypeScript typing
-function costumeListReducer(state: CostumeListState, action: CostumeListAction): CostumeListState {
+// Reducer
+function costumeListReducer(
+  state: CostumeListState,
+  action: CostumeListAction
+): CostumeListState {
   switch (action.type) {
     case "SET_SEARCH_QUERY":
       return { ...state, searchQuery: action.payload, currentPage: 1 };
@@ -78,11 +74,8 @@ function costumeListReducer(state: CostumeListState, action: CostumeListAction):
       return { ...state, sortConfig: action.payload };
     case "SET_CATEGORY_FILTER":
       return { ...state, categoryFilter: action.payload, currentPage: 1 };
-
     case "SET_STATUS_FILTER":
       return { ...state, statusFilter: action.payload, currentPage: 1 };
-    case "SET_GENDER_FILTER":
-      return { ...state, genderFilter: action.payload, currentPage: 1 };
     case "SET_SELECTED_COSTUME":
       return { ...state, selectedCostume: action.payload };
     case "SET_VIEW_DIALOG":
@@ -102,124 +95,145 @@ function costumeListReducer(state: CostumeListState, action: CostumeListAction):
         ...state,
         searchQuery: "",
         categoryFilter: null,
-
         statusFilter: null,
-        genderFilter: null,
-        currentPage: 1
+        currentPage: 1,
       };
     default:
       return state;
   }
 }
 
-// Updated filter function to work with CostumeItemTypeV2
+// Filtering
 const filterProducts = (
-  costumes: CostumeItemTypeV2[],
+  costumes: Costume[],
   searchQuery: string,
   categoryFilter: string | null,
-
-  statusFilter: string | null,
-  genderFilter: string | null
-): CostumeItemTypeV2[] => {
-  return costumes.filter(costume => {
-    const matchesSearch = !searchQuery ||
+  statusFilter: string | null
+): Costume[] => {
+  return costumes.filter((costume) => {
+    const matchesSearch =
+      !searchQuery ||
       costume.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       costume.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      costume.brand.toLowerCase().includes(searchQuery.toLowerCase());
+      costume.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      costume.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesCategory = !categoryFilter || costume.category === categoryFilter;
+    const matchesCategory =
+      !categoryFilter || costume.category === categoryFilter;
+
+    // Updated to match the correct status enum values
     const matchesStatus = !statusFilter || costume.status === statusFilter;
-    const matchesGender = !genderFilter || costume.gender === genderFilter;
 
-    return matchesSearch && matchesCategory && matchesStatus && matchesGender;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 };
 
-// Updated sort function to work with CostumeItemTypeV2
-const sortProducts = (costumes: CostumeItemTypeV2[], sortConfig: SortConfig): CostumeItemTypeV2[] => {
+// Sorting
+const sortProducts = (
+  costumes: Costume[],
+  sortConfig: SortConfig
+): Costume[] => {
   if (!sortConfig.key || !sortConfig.direction) return costumes;
 
   return [...costumes].sort((a, b) => {
     let aValue: any;
     let bValue: any;
 
-    if (sortConfig.key === 'main_rent_offer') {
-      // Defensive: If rent or main_rent_offer is missing, fallback to 0
-      aValue = a.rent?.main_rent_offer ? parseFloat(a.rent.main_rent_offer.price) : 0;
-      bValue = b.rent?.main_rent_offer ? parseFloat(b.rent.main_rent_offer.price) : 0;
+    // Handle special price sorting cases
+    if (sortConfig.key === "rental_price") {
+      aValue = parseFloat(a.rental_price) || 0;
+      bValue = parseFloat(b.rental_price) || 0;
+    } else if (sortConfig.key === "sale_price") {
+      aValue = parseFloat(a.sale_price) || 0;
+      bValue = parseFloat(b.sale_price) || 0;
     } else {
-      aValue = a[sortConfig.key as keyof CostumeItemTypeV2];
-      bValue = b[sortConfig.key as keyof CostumeItemTypeV2];
+      aValue = a[sortConfig.key as keyof Costume];
+      bValue = b[sortConfig.key as keyof Costume];
     }
 
-    if (typeof aValue === 'string') {
+    if (typeof aValue === "string" && typeof bValue === "string") {
       aValue = aValue.toLowerCase();
       bValue = bValue.toLowerCase();
     }
 
     if (aValue < bValue) {
-      return sortConfig.direction === 'asc' ? -1 : 1;
+      return sortConfig.direction === "asc" ? -1 : 1;
     }
     if (aValue > bValue) {
-      return sortConfig.direction === 'asc' ? 1 : -1;
+      return sortConfig.direction === "asc" ? 1 : -1;
     }
     return 0;
   });
 };
 
-// Helper functions
-const getAvailableStatuses = () => ['active', 'inactive', 'pending', 'draft'];
-const getAvailableGenders = () => ['male', 'female', 'unisex'];
+// Updated statuses to match the schema
+const getAvailableStatuses = (): Costume["status"][] => [
+  "active",
+  "inactive",
+  "rented",
+  "maintenance"
+];
 
 const CostumeListSection = () => {
   const router = useRouter();
   const [state, dispatch] = useReducer(costumeListReducer, initialState);
 
-  const { userRolesData } = useSupabaseAuth();
-  const lenderId = userRolesData?.user_id || "";
+  const { userRolesData, user } = useSupabaseAuth();
+  const lenderId = userRolesData?.user_id || user?.id || "";
 
-  // Fetch costumes with pagination
-  const { data: costumes, isLoading, isError, error } = useGetAllCreatedCostumeByLenderId(lenderId);
+  // Fetch costumes (with pagination)
+  const {
+    data: costumesResponse,
+    isLoading,
+    isError,
+    error,
+  } = useGetMyCostumes({
+    lender_id: lenderId,
+    page: state.currentPage,
+    limit: state.itemsPerPage,
+  });
 
-  // Fetch categories from API
-  const { data: categoriesData, isLoading: isCategoriesLoading } = useFetchAllCategories({
+  console.log("costumesResponse", costumesResponse);
+
+  // Fixed: Access data directly from response, not nested in items.docs
+  const costumes = costumesResponse?.data ?? [];
+  const pagination = costumesResponse?.pagination;
+
+  // Fetch categories
+  const { data: categoriesData } = useFetchAllCategories({
     page: 1,
     limit: 100,
   });
 
-  // UI for loading and error states
+  // Sorting handler - updated to include price fields
+  const handleSort = useCallback(
+    (key: keyof Costume | "rental_price" | "sale_price") => {
+      let direction: "asc" | "desc" | null = "asc";
 
-  // Handle sorting with proper typing
-  const handleSort = useCallback((key: keyof CostumeItemTypeV2 | 'main_rent_offer') => {
-    let direction: "asc" | "desc" | null = "asc";
-
-    if (state.sortConfig.key === key) {
-      if (state.sortConfig.direction === "asc") {
-        direction = "desc";
-      } else if (state.sortConfig.direction === "desc") {
-        direction = null;
+      if (state.sortConfig.key === key) {
+        if (state.sortConfig.direction === "asc") {
+          direction = "desc";
+        } else if (state.sortConfig.direction === "desc") {
+          direction = null;
+        }
       }
-    }
 
-    dispatch({
-      type: "SET_SORT_CONFIG",
-      payload: { key, direction }
-    });
-  }, [state.sortConfig]);
+      dispatch({
+        type: "SET_SORT_CONFIG",
+        payload: { key, direction },
+      });
+    },
+    [state.sortConfig]
+  );
 
-  // Filter and sort costumes - memoized for performance
+  // Filter + sort
   const filteredAndSortedCostumes = useMemo(() => {
-    if (!costumes) return [];
-
     let result = filterProducts(
       costumes,
       state.searchQuery,
       state.categoryFilter,
-
-      state.statusFilter,
-      state.genderFilter
+      state.statusFilter
     );
-
     result = sortProducts(result, state.sortConfig);
     return result;
   }, [
@@ -227,64 +241,38 @@ const CostumeListSection = () => {
     state.searchQuery,
     state.categoryFilter,
     state.statusFilter,
-    state.genderFilter,
-    state.sortConfig
+    state.sortConfig,
   ]);
 
-  // Get categories from API response - memoized
+  // Categories
   const categories = useMemo(() => {
     if (!categoriesData?.data?.categories) return [];
-    return categoriesData.data.categories.map(category => category.categoryName);
+    return categoriesData.data.categories.map((c: any) => c.categoryName);
   }, [categoriesData]);
 
-  // Get available statuses and genders (these are fixed)
   const statuses = getAvailableStatuses();
-  const genders = getAvailableGenders();
 
-  // Calculate display indices (for all items, since no pagination)
-  const totalItems = costumes?.length || 0;
-  const indexOfFirstItem = 0;
-  const indexOfLastItem = totalItems;
-
-  // View costume details - memoized handler
-  const handleViewCostume = useCallback((costume: CostumeItemTypeV2) => {
+  // Handlers
+  const handleViewCostume = useCallback((costume: Costume) => {
     dispatch({ type: "SET_SELECTED_COSTUME", payload: costume });
     dispatch({ type: "SET_VIEW_DIALOG", payload: true });
   }, []);
 
-  // Edit costume - memoized handler
-  const handleEditCostume = useCallback((costumeName: string) => {
-    try {
-      router.push(`/lender/products/edit?productName=${costumeName}`);
-    } catch (error) {
-      console.error('Error editing costume:', error);
-    }
-  }, [router]);
+  const handleEditCostume = useCallback(
+    (costumeName: string) => {
+      try {
+        router.push(`/lender/products/edit?productName=${encodeURIComponent(costumeName)}`);
+      } catch (err) {
+        console.error("Error editing costume:", err);
+      }
+    },
+    [router]
+  );
 
-  // Delete costume - memoized handler
-  const handleDeleteCostume = useCallback((costume: CostumeItemTypeV2) => {
-
+  const handleDeleteCostume = useCallback((costume: Costume) => {
     dispatch({ type: "SET_COSTUME_TO_DELETE", payload: costume });
     dispatch({ type: "SET_DELETE_DIALOG", payload: true });
   }, []);
-
-  // Confirm delete - memoized handler
-  const confirmDelete = useCallback(async () => {
-    if (!state.costumeToDelete || !userRolesData?.email) return;
-
-    try {
-      const preparedData = {
-        productId: state.costumeToDelete.id,
-        email: userRolesData.email,
-        lenderId: userRolesData.user_id
-      };
-
-      // await deleteCostume(preparedData);
-      dispatch({ type: "RESET_COSTUME_TO_DELETE" });
-    } catch (error) {
-      console.error('Error deleting costume:', error);
-    }
-  }, [state.costumeToDelete, userRolesData]);
 
   const handleSearchChange = useCallback((query: string) => {
     dispatch({ type: "SET_SEARCH_QUERY", payload: query });
@@ -294,15 +282,8 @@ const CostumeListSection = () => {
     dispatch({ type: "SET_CATEGORY_FILTER", payload: category });
   }, []);
 
-
-  // New handler for status filter
   const handleStatusFilterChange = useCallback((status: string | null) => {
     dispatch({ type: "SET_STATUS_FILTER", payload: status });
-  }, []);
-
-  // New handler for gender filter
-  const handleGenderFilterChange = useCallback((gender: string | null) => {
-    dispatch({ type: "SET_GENDER_FILTER", payload: gender });
   }, []);
 
   const handleResetFilters = useCallback(() => {
@@ -311,7 +292,57 @@ const CostumeListSection = () => {
 
   const handleViewDialogChange = useCallback((isOpen: boolean) => {
     dispatch({ type: "SET_VIEW_DIALOG", payload: isOpen });
+    if (!isOpen) {
+      dispatch({ type: "SET_SELECTED_COSTUME", payload: null });
+    }
   }, []);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className="w-full shadow-md">
+        <CardContent className="p-3 sm:p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading costumes...</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <Card className="w-full shadow-md">
+        <CardContent className="p-3 sm:p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <p className="text-destructive mb-2">Error loading costumes</p>
+              <p className="text-muted-foreground text-sm">
+                {error instanceof Error ? error.message : "An error occurred"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No lender ID
+  if (!lenderId) {
+    return (
+      <Card className="w-full shadow-md">
+        <CardContent className="p-3 sm:p-6">
+          <div className="flex items-center justify-center py-8">
+            <p className="text-muted-foreground">Please log in to view your costumes.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full shadow-md">
@@ -321,20 +352,14 @@ const CostumeListSection = () => {
           onSearchChange={handleSearchChange}
           categoryFilter={state.categoryFilter}
           onCategoryFilterChange={handleCategoryFilterChange}
-
           categories={categories}
-          // New props for status and gender filters
           statusFilter={state.statusFilter}
           onStatusFilterChange={handleStatusFilterChange}
-          genderFilter={state.genderFilter}
-          onGenderFilterChange={handleGenderFilterChange}
           statuses={statuses}
-          genders={genders}
           onResetFilters={handleResetFilters}
         />
 
         <div className="space-y-4 mt-4 w-full">
-          {/* Remove ScrollArea and min-width constraint for better mobile responsiveness */}
           <div className="w-full">
             <CostumeTableSection
               costumes={filteredAndSortedCostumes}
@@ -346,34 +371,53 @@ const CostumeListSection = () => {
             />
           </div>
 
-          {/* Pagination */}
-          {costumes && costumes.length > 0 && (
+          {pagination && pagination.total > 0 && (
             <CostumePaginationSection
-              currentPage={1}
-              totalPages={1}
-              itemsPerPage={totalItems}
-              totalItems={totalItems}
-              indexOfFirstItem={indexOfFirstItem}
-              indexOfLastItem={indexOfLastItem}
-              hasNext={false}
-              hasPrev={false}
-              onPageChange={() => { }}
-              onItemsPerPageChange={() => { }}
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              itemsPerPage={pagination.limit}
+              totalItems={pagination.total}
+              indexOfFirstItem={(pagination.page - 1) * pagination.limit + 1}
+              indexOfLastItem={Math.min(
+                pagination.page * pagination.limit,
+                pagination.total
+              )}
+              hasNext={pagination.hasNextPage}
+              hasPrev={pagination.hasPreviousPage}
+              onPageChange={(page) =>
+                dispatch({ type: "SET_CURRENT_PAGE", payload: page })
+              }
+              onItemsPerPageChange={(limit) =>
+                dispatch({ type: "SET_ITEMS_PER_PAGE", payload: limit })
+              }
             />
+          )}
+
+          {/* Empty state */}
+          {costumes.length === 0 && !isLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-2">No costumes found</p>
+                <p className="text-sm text-muted-foreground">
+                  {state.searchQuery || state.categoryFilter || state.statusFilter
+                    ? "Try adjusting your search or filters"
+                    : "Create your first costume listing to get started"}
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </CardContent>
 
-      {/* Costume Detail Dialog */}
-      <Suspense fallback={<div className="p-4 text-center">Loading details...</div>}>
+      <Suspense
+        fallback={<div className="p-4 text-center">Loading details...</div>}
+      >
         <ProductDetailDialog
           product={state.selectedCostume}
           open={state.viewDialog}
           onOpenChange={handleViewDialogChange}
         />
       </Suspense>
-
-      {/* Delete Confirmation Dialog (not implemented) */}
     </Card>
   );
 };
