@@ -3,12 +3,16 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User } from 'lucide-react';
+import { HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User, ArrowLeft } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getUserSession, signOut } from '../../../actions/auth';
+import SwitchRoleButton from "@/components/layout/UiSections/ButtonSwitch/SwitchRoleButton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { usePathname } from "next/navigation";
+import { useGetBorrowerProfile } from "@/lib/api/borrowerApi";
 
 const Header = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +20,7 @@ const Header = () => {
     const { theme, setTheme } = useTheme();
     const [user, setUser] = useState<any>(null);
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
         setMounted(true);
@@ -27,6 +32,33 @@ const Header = () => {
         };
         fetchUser();
     }, []);
+
+    const isAuthenticated = !!user;
+    const userRole = user?.user_metadata?.role || null;
+
+    // Get username from metadata, fallback to email name (before @) if username is undefined
+    let username = user?.user_metadata?.username;
+    if (!username || typeof username !== 'string' || username.trim() === '') {
+        const email = user?.user_metadata?.email || user?.email;
+        username = email ? email.split('@')[0] : 'user';
+    }
+    username = username.toLowerCase();
+
+    // Fetch profile data using the username (only if authenticated)
+    const { data: profileData } = useGetBorrowerProfile(isAuthenticated ? username : "");
+
+    // Compute display name
+    let displayName = null;
+    if (profileData && (profileData.first_name || profileData.last_name)) {
+        displayName = [
+            profileData.first_name,
+            profileData.middle_name,
+            profileData.last_name
+        ].filter(Boolean).join(' ');
+    }
+    if (!displayName) {
+        displayName = user?.user_metadata?.name || username;
+    }
 
     const navLinks = [
         { name: 'Community', href: '/' },
@@ -41,24 +73,21 @@ const Header = () => {
     const handleLogout = async () => {
         await signOut();
     };
-
-
-    const isAuthenticated = !!user;
-    const userRole = user?.user_metadata?.role || null;
-
-    // Get username from metadata, fallback to email name (before @) if username is undefined
-    let username = user?.user_metadata?.username;
-    if (!username || typeof username !== 'string' || username.trim() === '') {
-        const email = user?.user_metadata?.email || user?.email;
-        username = email ? email.split('@')[0] : 'user';
-    }
-    username = username.toLowerCase();
-
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-primary-950/90 dark:border-primary-900">
             <div className="container flex h-16 items-center justify-between mx-auto px-4">
                 {/* Logo */}
                 <div className='flex justify-start items-center gap-8'>
+                    {/* Back Button */}
+                    {pathname !== "/" && (
+                        <button
+                            onClick={() => router.back()}
+                            className="mr-2 flex items-center justify-center rounded-full p-2 hover:bg-muted transition-colors"
+                            aria-label="Go back"
+                        >
+                            <ArrowLeft className="h-5 w-5 text-foreground" />
+                        </button>
+                    )}
                     <Link href="/" className="flex items-center space-x-2">
                         <span className="text-xl font-bold font-heading dark:text-white">CosConnect</span>
                     </Link>
@@ -80,7 +109,6 @@ const Header = () => {
                         ))}
                     </nav>
                 </div>
-
                 {/* Action Buttons */}
                 <div className="flex items-center space-x-4">
                     {/* Theme Toggle Button */}
@@ -109,14 +137,28 @@ const Header = () => {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    size="icon"
                                     className={cn(
-                                        "hidden md:flex",
+                                        "hidden md:flex items-center gap-3 px-3 py-2 rounded-full",
                                         "hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-950",
                                         "transition-colors duration-300 cursor-pointer"
                                     )}
                                 >
-                                    <User className="h-5 w-5" />
+                                    {/* Avatar */}
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={user?.user_metadata?.avatar_url} alt={username} />
+                                        <AvatarFallback>
+                                            <User className="h-5 w-5" />
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    {/* User Info */}
+                                    <div className="flex flex-col items-start">
+                                        <span className="font-semibold text-sm text-foreground">
+                                            {displayName}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground capitalize">
+                                            {userRole}
+                                        </span>
+                                    </div>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
@@ -133,10 +175,10 @@ const Header = () => {
                                     </DropdownMenuItem>
                                 ) : (
                                     <Link href="/my-rentals">
-                                        <DropdownMenuItem>
+                                        {/* <DropdownMenuItem>
                                             <ShoppingCart className="mr-2 h-4 w-4" />
                                             <span>My Rentals</span>
-                                        </DropdownMenuItem>
+                                        </DropdownMenuItem> */}
                                     </Link>
                                 )}
                                 <Link href="/settings">
@@ -148,6 +190,11 @@ const Header = () => {
                                 <DropdownMenuItem onClick={handleLogout}>
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Logout</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <div className="w-full flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-muted transition-colors">
+                                        <SwitchRoleButton />
+                                    </div>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -210,6 +257,10 @@ const Header = () => {
                                         </Link>
                                     ))}
                                 </nav>
+
+                                <div className='flex items-center justify-center'>
+                                    <SwitchRoleButton />
+                                </div>
 
                                 {/* User Section */}
                                 <div className="p-4 space-y-4 border-t dark:border-primary-800">

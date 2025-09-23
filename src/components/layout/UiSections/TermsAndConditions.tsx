@@ -8,7 +8,7 @@ const TermsAndConditions = () => {
             <Card className="border shadow-sm">
                 <CardHeader className="pb-4 pt-6 border-b">
                     <CardTitle className="text-3xl font-bold text-center">Terms and Conditions</CardTitle>
-                    <p className="text-center opacity-70">Last Updated: April 20, 2025</p>
+                    <p className="text-center opacity-70">Last Updated: April 20, 2025</p> 
                 </CardHeader>
 
                 <CardContent className="p-6">

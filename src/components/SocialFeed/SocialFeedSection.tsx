@@ -48,7 +48,6 @@ const transformPostForCard = (post: PostItem) => ({
 const DEFAULT_POSTS_PER_PAGE = 10;
 
 const SocialFeedSection = () => {
-  const [allPosts, setAllPosts] = useState<PostItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [postsPerPage, setPostsPerPage] = useState(DEFAULT_POSTS_PER_PAGE);
 
@@ -67,15 +66,6 @@ const SocialFeedSection = () => {
     limit: postsPerPage,
     page: currentPage,
   });
-
-  // Update local state when new posts are fetched
-  useEffect(() => {
-    if (fetchedPosts && Array.isArray(fetchedPosts)) {
-      setAllPosts(fetchedPosts);
-    } else {
-      setAllPosts([]);
-    }
-  }, [fetchedPosts]);
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -104,6 +94,8 @@ const SocialFeedSection = () => {
     setCurrentPage(1);
     refetch();
   }, [refetch]);
+
+   const posts = fetchedPosts ?? [];
 
   // Loading state for initial load or page changes
   if (isAuthLoading || (isLoading && currentPage === 1)) {
@@ -194,10 +186,10 @@ const SocialFeedSection = () => {
 
       {/* Posts List */}
       <div className="space-y-4 mb-8">
-        {allPosts.length > 0 ? (
+        {posts.length > 0 ? (
           <>
             {/* Posts */}
-            {allPosts.map((post) => (
+            {posts.map((post) => (
               <div
                 key={post.id}
                 onClick={() => handleSelectPost(post)}
