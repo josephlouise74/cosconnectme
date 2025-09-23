@@ -1,4 +1,4 @@
-import MarketPlaceSection from '@/components/UiSections/MarketPlace/MarketPlaceSection'
+import MarketPlaceSection from '@/components/MarketPlace/MarketPlaceSection'
 
 const CostumePage = () => {
     return <MarketPlaceSection />

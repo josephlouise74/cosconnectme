@@ -32,6 +32,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth";
 import { cn } from "@/lib/utils";
 import { signOut } from "actions/auth";
+import SwitchRoleButton from "@/components/layout/UiSections/ButtonSwitch/SwitchRoleButton";
 
 // Types
 interface SidebarChildItem {
@@ -377,9 +378,16 @@ const SidebarLender = memo(() => {
                             </p>
                         </div>
                     )}
+                    
                 </div>
-            </div>
+                <div className={cn( "mt-3", isCollapsed ? "flex justify-center" : "w-full"
+                )}>
+                    <SwitchRoleButton iconOnly={isCollapsed}/>
+                </div>
 
+            </div>
+            
+            
             {/* Theme Toggle */}
             <div className={cn("p-4 mx-4", isCollapsed && "mx-2")}>
                 {mounted && (
@@ -478,5 +486,4 @@ const SidebarLender = memo(() => {
 });
 
 SidebarLender.displayName = 'SidebarLender';
-
 export default SidebarLender;

@@ -21,7 +21,7 @@ const Page = () => {
   // Redirect unauthenticated users to login
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace('/auth/login')
+      router.replace('/signin')
       return
     }
   }, [isAuthenticated, isLoading, router])
