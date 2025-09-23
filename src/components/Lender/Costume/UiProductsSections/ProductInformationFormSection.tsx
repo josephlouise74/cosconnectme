@@ -187,8 +187,7 @@ const ListingTypeSelect = memo<{
                         </SelectTrigger>
                         <SelectContent className='w-full'>
                             <SelectItem value="rent">Rent</SelectItem>
-                            <SelectItem value="sale">Sale</SelectItem>
-                            <SelectItem value="both">Both</SelectItem>
+                            {/*  <SelectItem value="sale">Sale</SelectItem> */}
                         </SelectContent>
                     </Select>
                 )}

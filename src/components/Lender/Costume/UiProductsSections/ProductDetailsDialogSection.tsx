@@ -55,9 +55,9 @@ const ProductDetailDialog = ({
     // Memoized listing type display
     const listingTypeDisplay = useMemo(() => {
         if (!product) return null;
-        
+
         const badges = [];
-        
+
         if (product.listing_type === 'rent' || product.listing_type === 'both') {
             badges.push(
                 <Badge key="rent" variant="secondary" className="mr-2">
@@ -65,7 +65,7 @@ const ProductDetailDialog = ({
                 </Badge>
             );
         }
-        
+
         if (product.listing_type === 'sale' || product.listing_type === 'both') {
             badges.push(
                 <Badge key="sale" variant="secondary">
@@ -73,7 +73,7 @@ const ProductDetailDialog = ({
                 </Badge>
             );
         }
-        
+
         return (
             <div className="flex items-center">
                 {badges}
@@ -134,12 +134,11 @@ const ProductDetailDialog = ({
                 </DialogHeader>
 
                 <Tabs defaultValue="details" className="mt-6">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="details">Details</TabsTrigger>
-                        <TabsTrigger value="pricing">Pricing</TabsTrigger>
                         <TabsTrigger value="images">Images</TabsTrigger>
                     </TabsList>
-                    
+
                     {/* DETAILS TAB */}
                     <TabsContent value="details" className="space-y-6 pt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -324,100 +323,7 @@ const ProductDetailDialog = ({
                         )}
                     </TabsContent>
 
-                    {/* PRICING TAB */}
-                    <TabsContent value="pricing" className="space-y-6 pt-4">
-                        {/* Pricing Information */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <DollarSign className="h-5 w-5" />
-                                    Listing Type: {product.listing_type.toUpperCase()}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {/* Rent Pricing */}
-                                {(product.listing_type === 'rent' || product.listing_type === 'both') && product.rent && (
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                                            <CreditCard className="h-5 w-5" />
-                                            Rental Options
-                                        </h3>
-                                        
-                                        {/* Main Rent Offer */}
-                                        {product.rent.main_rent_offer && (
-                                            <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
-                                                <div>
-                                                    <p className="text-sm text-muted-foreground">Main Rental Offer</p>
-                                                    <p className="font-semibold">
-                                                        {formatOfferType(product.rent.main_rent_offer.type)}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-2xl font-bold text-primary">
-                                                        ₱{product.rent.main_rent_offer.price}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-                                        
-                                        {/* Alternative Rent Offers */}
-                                        {product.rent.alternative_rent_offers && product.rent.alternative_rent_offers.length > 0 && (
-                                            <div className="space-y-3 mt-4">
-                                                <h4 className="text-sm font-medium">Alternative Rental Options</h4>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                    {product.rent.alternative_rent_offers.map((offer, idx) => (
-                                                        <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                                            <p className="font-medium">{formatOfferType(offer.type)}</p>
-                                                            <p className="font-bold">₱{offer.price}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                
-                                {/* Sale Pricing */}
-                                {(product.listing_type === 'sale' || product.listing_type === 'both') && product.sale && (
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                                            <ShoppingBag className="h-5 w-5" />
-                                            Sale Option
-                                        </h3>
-                                        <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
-                                            <div>
-                                                <p className="text-sm text-muted-foreground">Sale Price</p>
-                                                <p className="font-semibold">One-time purchase</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-2xl font-bold text-primary">₱{product.sale.price}</p>
-                                                {product.sale.discount > 0 && (
-                                                    <p className="text-sm text-destructive">-{product.sale.discount}% discount</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
 
-                        {/* Add-Ons */}
-                        {product.add_ons && product.add_ons.length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-lg">
-                                        <Gem className="h-5 w-5" />
-                                        Available Add-Ons
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                        {product.add_ons.map(renderAddOnCard)}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </TabsContent>
 
                     {/* IMAGES TAB */}
                     <TabsContent value="images" className="space-y-6 pt-4">
@@ -450,7 +356,7 @@ const ProductDetailDialog = ({
                                             )}
                                         </div>
                                     </div>
-                                    
+
                                     {/* Back Image */}
                                     <div className="space-y-2">
                                         <p className="text-sm font-medium">Back View</p>

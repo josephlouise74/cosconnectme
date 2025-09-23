@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,9 @@ import {
     TableCell,
     TableHead,
     TableHeader,
-    TableRow
+    TableRow,
 } from "@/components/ui/table";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { CostumeItemTypeV2 } from "@/types/costumes/costumeTypeV2";
-import { formatOfferType } from '@/lib/utils';
 import {
     ArrowUpDown,
     ChevronDown,
@@ -26,439 +24,503 @@ import {
     Eye,
     MoreHorizontal,
     Pencil,
-    Trash2
+    Trash2,
 } from "lucide-react";
-import { memo, useMemo, useState, useCallback } from "react";
 import Image from "next/image";
+import { memo, useCallback, useMemo, useState } from "react";
+import { Costume } from "@/lib/api/costumeApi";
 
 interface CostumeTableProps {
-    costumes: CostumeItemTypeV2[];
+    costumes: Costume[];
     sortConfig: {
-        key: keyof CostumeItemTypeV2 | 'main_rent_offer' | null;
-        direction: 'asc' | 'desc' | null;
+        key: keyof Costume | "rental_price" | "sale_price" | null;
+        direction: "asc" | "desc" | null;
     };
-    onSort: (key: keyof CostumeItemTypeV2 | 'main_rent_offer') => void;
-    onViewCostume: (costume: CostumeItemTypeV2) => void;
+    onSort: (key: keyof Costume | "rental_price" | "sale_price") => void;
+    onViewCostume: (costume: Costume) => void;
     onEditCostume: (costumeName: string) => void;
-    onDeleteCostume: (costume: CostumeItemTypeV2) => void;
+    onDeleteCostume: (costume: Costume) => void;
 }
 
-// Update getMainPriceDisplay to use rent.main_rent_offer and sale
-const getMainPriceDisplay = (costume: CostumeItemTypeV2) => {
-    if (costume.listing_type === 'sale' && costume.sale) {
-        return `₱${costume.sale.price} (Sale)`;
+// Utility for price display - updated to match new schema
+const getPriceDisplay = (costume: Costume) => {
+    const rentalPrice = parseFloat(costume.rental_price) || 0;
+    const salePrice = parseFloat(costume.sale_price) || 0;
+
+    if (costume.listing_type === 'rent') {
+        return `₱${rentalPrice.toFixed(2)}/day`;
+    } else if (costume.listing_type === 'sale') {
+        return `₱${salePrice.toFixed(2)}`;
+    } else if (costume.listing_type === 'both') {
+        return `₱${rentalPrice.toFixed(2)}/day | ₱${salePrice.toFixed(2)}`;
     }
-    if (costume.rent && costume.rent.main_rent_offer) {
-        return `₱${costume.rent.main_rent_offer.price} (${formatOfferType(costume.rent.main_rent_offer.type)})`;
-    }
-    return '-';
+    return '₱0.00';
 };
 
-// Separate component for desktop table row
-const DesktopTableRow = memo(({
-    costume,
-    index,
-    onViewCostume,
-    onEditCostume,
-    onDeleteCostume 
-}: {
-    costume: CostumeItemTypeV2;
-    index: number;
-    onViewCostume: (costume: CostumeItemTypeV2) => void;
-    onEditCostume: (costumeName: string) => void;
-    onDeleteCostume: (costume: CostumeItemTypeV2) => void;
-}) => {
-    return (
-        <TableRow id={index.toString()} className="text-sm">
-            <TableCell className="py-2">
-                <div className="flex items-center gap-2 md:gap-3">
-                    <div className="relative h-10 w-10 md:h-12 md:w-12 rounded-md overflow-hidden flex-shrink-0">
-                        <AspectRatio ratio={1} className="w-full h-full">
-                            <Image
-                                src={costume.main_images.front}
-                                alt={costume.name}
-                                fill
-                                className="object-cover rounded-md"
-                                sizes="40px"
-                            />
-                        </AspectRatio>
-                    </div>
-                    <div className="max-w-[120px] md:max-w-[200px]">
-                        <p className="font-medium truncate" title={costume.name}>
-                            {costume.name}
-                        </p>
-                        <p className="text-xs text-gray-400 truncate" title={costume.brand}>
-                            {costume.brand}
-                        </p>
-                    </div>
-                </div>
-            </TableCell>
-            <TableCell className="py-2">
-                <Badge
-                    variant="outline"
-                    className="truncate max-w-[80px] md:max-w-[100px]"
-                    title={costume.category}
-                >
-                    {costume.category}
-                </Badge>
-            </TableCell>
-            <TableCell className="py-2">
-                <Badge
-                    variant="secondary"
-                    className="capitalize truncate max-w-[80px]"
-                >
-                    {costume.listing_type}
-                </Badge>
-            </TableCell>
-            <TableCell className="font-medium text-rose-600 py-2 max-w-[100px] truncate" title={getMainPriceDisplay(costume)}>
-                {getMainPriceDisplay(costume)}
-                {costume.sale && costume.listing_type === 'sale' && costume.sale.discount > 0 && (
-                    <span className="text-xs text-gray-500 ml-1">
-                        -{costume.sale.discount}%
-                    </span>
-                )}
-            </TableCell>
-            <TableCell className="py-2">
-                <span className="capitalize text-xs">{costume.gender}</span>
-            </TableCell>
-            <TableCell className="py-2">
-                <span className="text-xs">{costume.sizes}</span>
-            </TableCell>
-            <TableCell className="py-2">
-                <Badge
-                    variant={costume.status === 'active' ? 'default' : 'secondary'}
-                    className="capitalize truncate max-w-[80px]"
-                >
-                    {costume.status || 'pending'}
-                </Badge>
-            </TableCell>
-            <TableCell className="text-right py-2">
-                <ActionsDropdown
-                    costume={costume}
-                    onViewCostume={onViewCostume}
-                    onEditCostume={onEditCostume}
-                    onDeleteCostume={onDeleteCostume}
-                />
-            </TableCell>
-        </TableRow>
-    );
-});
+// Utility for status badge variant
+const getStatusBadgeVariant = (status: Costume["status"]) => {
+    switch (status) {
+        case "active":
+            return "default";
+        case "rented":
+            return "secondary";
+        case "inactive":
+            return "outline";
+        case "maintenance":
+            return "destructive";
+        default:
+            return "outline";
+    }
+};
 
-DesktopTableRow.displayName = 'DesktopTableRow';
+// Utility to get main image - updated for new schema
+const getMainImage = (costume: Costume) => {
+    // Try main_images.front first, then fallback to additional_images
+    if (costume.main_images?.front) {
+        return costume.main_images.front;
+    }
+    if (costume.additional_images?.length > 0) {
+        return costume.additional_images[0]?.url;
+    }
+    return "/placeholder.png";
+};
 
-// Separate component for mobile card
-const MobileCard = memo(({
-    costume,
-    index,
-    isExpanded,
-    onToggleExpansion,
-    onViewCostume,
-    onEditCostume,
-    onDeleteCostume
-}: {
-    costume: CostumeItemTypeV2;
-    index: number;
-    isExpanded: boolean;
-    onToggleExpansion: () => void;
-    onViewCostume: (costume: CostumeItemTypeV2) => void;
-    onEditCostume: (costumeName: string) => void;
-    onDeleteCostume: (costume: CostumeItemTypeV2) => void;
-}) => {
-    return (
-        <div className="rounded-lg shadow-sm border p-2 sm:p-4">
-            <div className="flex justify-between items-start gap-2">
-                <div className="flex gap-2">
-                    <div className="relative h-12 w-12 rounded-md overflow-hidden flex-shrink-0">
-                        <AspectRatio ratio={1} className="w-full h-full">
-                            <Image
-                                src={costume.main_images.front}
-                                alt={costume.name}
-                                fill
-                                className="object-cover rounded-md"
-                                sizes="48px"
-                            />
-                        </AspectRatio>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate max-w-[120px]" title={costume.name}>{costume.name}</h3>
-                        <p className="text-xs text-gray-400 truncate max-w-[120px]" title={costume.brand}>
-                            {costume.brand}
-                        </p>
-                        <Badge variant="outline" className="mt-1 truncate max-w-[80px]" title={costume.category}>
-                            {costume.category}
-                        </Badge>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                    <ActionsDropdown
-                        costume={costume}
-                        onViewCostume={onViewCostume}
-                        onEditCostume={onEditCostume}
-                        onDeleteCostume={onDeleteCostume}
-                    />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={onToggleExpansion}
-                        aria-label={isExpanded ? "Collapse details" : "Expand details"}
-                    >
-                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
-                </div>
-            </div>
+// Desktop row
+const DesktopTableRow = memo(
+    ({
+        costume,
+        index,
+        onViewCostume,
+        onEditCostume,
+        onDeleteCostume,
+    }: {
+        costume: Costume;
+        index: number;
+        onViewCostume: (costume: Costume) => void;
+        onEditCostume: (costumeName: string) => void;
+        onDeleteCostume: (costume: Costume) => void;
+    }) => {
+        const mainImage = getMainImage(costume);
 
-            {isExpanded && (
-                <div className="mt-2 space-y-2 pt-2 border-t">
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Listing Type:</span>
-                        <Badge variant="secondary" className="capitalize">{costume.listing_type}</Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Price:</span>
-                        <span className="font-medium text-rose-600 truncate max-w-[100px]" title={getMainPriceDisplay(costume)}>
-                            {getMainPriceDisplay(costume)}
-                            {costume.sale && costume.listing_type === 'sale' && costume.sale.discount > 0 && (
-                                <span className="text-xs text-gray-500 ml-1">
-                                    -{costume.sale.discount}%
-                                </span>
+        return (
+            <TableRow id={index.toString()} className="text-sm hover:bg-muted/50">
+                <TableCell className="py-2">
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <div className="relative h-10 w-10 md:h-12 md:w-12 rounded-md overflow-hidden flex-shrink-0 border">
+                            <AspectRatio ratio={1} className="w-full h-full">
+                                <Image
+                                    src={mainImage as string}
+                                    alt={costume.name}
+                                    fill
+                                    className="object-cover rounded-md"
+                                    sizes="48px"
+                                />
+                            </AspectRatio>
+                        </div>
+                        <div className="max-w-[160px] md:max-w-[240px]">
+                            <p className="font-medium truncate" title={costume.name}>
+                                {costume.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate" title={costume.description}>
+                                {costume.description}
+                            </p>
+                            {costume.brand && (
+                                <p className="text-xs text-muted-foreground/70 truncate" title={costume.brand}>
+                                    {costume.brand}
+                                </p>
                             )}
-                        </span>
+                        </div>
                     </div>
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Status:</span>
-                        <Badge
-                            variant={costume.status === 'active' ? 'default' : 'secondary'}
-                            className="capitalize truncate max-w-[80px]"
+                </TableCell>
+                <TableCell className="py-2">
+                    <Badge variant="outline" className="truncate max-w-[100px]" title={costume.category}>
+                        {costume.category}
+                    </Badge>
+                </TableCell>
+                <TableCell className="font-medium text-primary py-2 max-w-[120px]">
+                    <div className="truncate" title={getPriceDisplay(costume)}>
+                        {getPriceDisplay(costume)}
+                    </div>
+                    <Badge variant="secondary" className="text-xs mt-1 capitalize">
+                        {costume.listing_type}
+                    </Badge>
+                </TableCell>
+                <TableCell className="py-2">
+                    <Badge
+                        variant={getStatusBadgeVariant(costume.status)}
+                        className="capitalize truncate max-w-[90px]"
+                    >
+                        {costume.status}
+                    </Badge>
+                    {!costume.is_available && (
+                        <div className="text-xs text-muted-foreground mt-1">Unavailable</div>
+                    )}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground py-2">
+                    {new Date(costume.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    })}
+                </TableCell>
+                <TableCell className="text-right py-2">
+                    <div className="flex items-center justify-end gap-2">
+
+                        <ActionsDropdown
+                            costume={costume}
+                            onViewCostume={onViewCostume}
+                            onEditCostume={onEditCostume}
+                            onDeleteCostume={onDeleteCostume}
+                        />
+                    </div>
+                </TableCell>
+            </TableRow>
+        );
+    }
+);
+
+DesktopTableRow.displayName = "DesktopTableRow";
+
+// Mobile card
+const MobileCard = memo(
+    ({
+        costume,
+        index,
+        isExpanded,
+        onToggleExpansion,
+        onViewCostume,
+        onEditCostume,
+        onDeleteCostume,
+    }: {
+        costume: Costume;
+        index: number;
+        isExpanded: boolean;
+        onToggleExpansion: () => void;
+        onViewCostume: (costume: Costume) => void;
+        onEditCostume: (costumeName: string) => void;
+        onDeleteCostume: (costume: Costume) => void;
+    }) => {
+        const mainImage = getMainImage(costume);
+
+        return (
+            <div className="rounded-lg shadow-sm border p-3 bg-card">
+                <div className="flex justify-between items-start gap-3">
+                    <div className="flex gap-3 flex-1 min-w-0">
+                        <div className="relative h-12 w-12 rounded-md overflow-hidden flex-shrink-0 border">
+                            <AspectRatio ratio={1} className="w-full h-full">
+                                <Image
+                                    src={mainImage as string}
+                                    alt={costume.name}
+                                    fill
+                                    className="object-cover rounded-md"
+                                    sizes="48px"
+                                />
+                            </AspectRatio>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate" title={costume.name}>
+                                {costume.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground truncate" title={costume.description}>
+                                {costume.description}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                    {costume.category}
+                                </Badge>
+                                <Badge
+                                    variant={getStatusBadgeVariant(costume.status)}
+                                    className="text-xs capitalize"
+                                >
+                                    {costume.status}
+                                </Badge>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                        <ActionsDropdown
+                            costume={costume}
+                            onViewCostume={onViewCostume}
+                            onEditCostume={onEditCostume}
+                            onDeleteCostume={onDeleteCostume}
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={onToggleExpansion}
                         >
-                            {costume.status || 'pending'}
-                        </Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Gender:</span>
-                        <span className="font-medium capitalize truncate max-w-[80px]" title={costume.gender}>{costume.gender}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Sizes:</span>
-                        <span className="text-xs">{costume.sizes}</span>
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
                     </div>
                 </div>
+
+                {isExpanded && (
+                    <div className="mt-3 space-y-2 pt-3 border-t text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Price:</span>
+                            <div className="text-right">
+                                <div className="font-medium text-primary">{getPriceDisplay(costume)}</div>
+                                <Badge variant="secondary" className="text-xs capitalize mt-1">
+                                    {costume.listing_type}
+                                </Badge>
+                            </div>
+                        </div>
+                        {costume.brand && (
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Brand:</span>
+                                <span>{costume.brand}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Gender:</span>
+                            <Badge variant="outline" className="text-xs capitalize">
+                                {costume.gender}
+                            </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Sizes:</span>
+                            <span className="text-xs">{costume.sizes}</span>
+                        </div>
+
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Available:</span>
+                            <Badge variant={costume.is_available ? "default" : "secondary"} className="text-xs">
+                                {costume.is_available ? "Yes" : "No"}
+                            </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Created:</span>
+                            <span className="text-xs">
+                                {new Date(costume.created_at).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                })}
+                            </span>
+                        </div>
+                        {costume.tags.length > 0 && (
+                            <div className="flex justify-between items-start">
+                                <span className="text-muted-foreground">Tags:</span>
+                                <div className="flex flex-wrap gap-1 max-w-[200px] justify-end">
+                                    {costume.tags.slice(0, 3).map((tag, tagIndex) => (
+                                        <Badge key={tagIndex} variant="outline" className="text-xs">
+                                            {tag}
+                                        </Badge>
+                                    ))}
+                                    {costume.tags.length > 3 && (
+                                        <Badge variant="outline" className="text-xs">
+                                            +{costume.tags.length - 3}
+                                        </Badge>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    }
+);
+
+MobileCard.displayName = "MobileCard";
+
+// Actions dropdown
+const ActionsDropdown = memo(
+    ({
+        costume,
+        onViewCostume,
+        onEditCostume,
+        onDeleteCostume,
+    }: {
+        costume: Costume;
+        onViewCostume: (costume: Costume) => void;
+        onEditCostume: (costumeName: string) => void;
+        onDeleteCostume: (costume: Costume) => void;
+    }) => (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <span className="sr-only">Open menu</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => onViewCostume(costume)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEditCostume(costume.name)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    onClick={() => onDeleteCostume(costume)}
+                    className="text-destructive focus:text-destructive"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+);
+
+ActionsDropdown.displayName = "ActionsDropdown";
+
+// Sort button
+const SortButton = memo(
+    ({
+        sortKey,
+        children,
+        sortConfig,
+        onSort,
+    }: {
+        sortKey: keyof Costume | "rental_price" | "sale_price";
+        children: React.ReactNode;
+        sortConfig: {
+            key: keyof Costume | "rental_price" | "sale_price" | null;
+            direction: "asc" | "desc" | null;
+        };
+        onSort: (key: keyof Costume | "rental_price" | "sale_price") => void;
+    }) => (
+        <button
+            onClick={() => onSort(sortKey)}
+            className="flex items-center hover:text-foreground transition-colors text-left"
+        >
+            {children}
+            {sortConfig.key === sortKey ? (
+                sortConfig.direction === "asc" ? (
+                    <ChevronUp className="ml-1 h-4 w-4 text-muted-foreground" />
+                ) : (
+                    <ChevronDown className="ml-1 h-4 w-4 text-muted-foreground" />
+                )
+            ) : (
+                <ArrowUpDown className="ml-1 h-4 w-4 text-muted-foreground" />
             )}
-        </div>
-    );
-});
+        </button>
+    )
+);
 
-MobileCard.displayName = 'MobileCard';
+SortButton.displayName = "SortButton";
 
-// Reusable actions dropdown component
-const ActionsDropdown = memo(({
-    costume,
-    onViewCostume,
-    onEditCostume,
-    onDeleteCostume
-}: {
-    costume: CostumeItemTypeV2;
-    onViewCostume: (costume: CostumeItemTypeV2) => void;
-    onEditCostume: (costumeName: string) => void;
-    onDeleteCostume: (costume: CostumeItemTypeV2) => void;
-}) => (
-    <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                aria-label="Open actions menu"
-            >
-                <MoreHorizontal className="h-4 w-4" />
-            </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onViewCostume(costume)}>
-                <Eye className="h-4 w-4 mr-2" />
-                View
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEditCostume(costume.name)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-                onClick={() => onDeleteCostume(costume)}
-                className="text-rose-500 focus:text-rose-500"
-            >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-            </DropdownMenuItem>
-        </DropdownMenuContent>
-    </DropdownMenu>
-));
-
-ActionsDropdown.displayName = 'ActionsDropdown';
-
-// Sort header button component
-const SortButton = memo(({
-    sortKey,
-    children,
-    sortConfig,
-    onSort
-}: {
-    sortKey: keyof CostumeItemTypeV2 | 'main_rent_offer';
-    children: React.ReactNode;
-    sortConfig: { key: keyof CostumeItemTypeV2 | 'main_rent_offer' | null; direction: 'asc' | 'desc' | null; };
-    onSort: (key: keyof CostumeItemTypeV2 | 'main_rent_offer') => void;
-}) => (
-    <button
-        onClick={() => onSort(sortKey)}
-        className="flex items-center hover:text-gray-900 transition-colors"
-        aria-label={`Sort by ${String(sortKey)}`}
-    >
-        {children}
-        {sortConfig.key === sortKey ? (
-            sortConfig.direction === "asc" ?
-                <ChevronUp className="ml-1 h-4 w-4" /> :
-                <ChevronDown className="ml-1 h-4 w-4" />
-        ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4" />
-        )}
-    </button>
-));
-
-SortButton.displayName = 'SortButton';
-
-// Empty state component
-const EmptyState = memo(() => (
-    <div className="text-center py-8 text-gray-500">
-        No costumes found matching your criteria
+const EmptyState = () => (
+    <div className="text-center py-12">
+        <div className="text-muted-foreground mb-2">No costumes found</div>
+        <p className="text-sm text-muted-foreground/70">
+            Your costume listings will appear here
+        </p>
     </div>
-));
+);
 
-EmptyState.displayName = 'EmptyState';
+const CostumeTableSection = memo(
+    ({ costumes, sortConfig, onSort, onViewCostume, onEditCostume, onDeleteCostume }: CostumeTableProps) => {
+        const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-const CostumeTableSection = memo(({
-    costumes,
-    sortConfig,
-    onSort,
-    onViewCostume,
-    onEditCostume,
-    onDeleteCostume
-}: CostumeTableProps) => {
-    // Use unique keys based on costume.id and index to prevent collision
-    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+        const getRowKey = useCallback((costume: Costume, index: number) => `${costume.id}-${index}`, []);
 
-    // Generate unique key for each costume row
-    const getRowKey = useCallback((costume: CostumeItemTypeV2, index: number) =>
-        `${costume.id || index}-${index}`, []);
+        const toggleRowExpansion = useCallback((rowKey: string) => {
+            setExpandedRows((prev) => {
+                const newSet = new Set(prev);
+                if (newSet.has(rowKey)) {
+                    newSet.delete(rowKey);
+                } else {
+                    newSet.add(rowKey);
+                }
+                return newSet;
+            });
+        }, []);
 
-    // Toggle expanded state for a row using unique key
-    const toggleRowExpansion = useCallback((rowKey: string) => {
-        setExpandedRows(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(rowKey)) {
-                newSet.delete(rowKey);
-            } else {
-                newSet.add(rowKey);
-            }
-            return newSet;
-        });
-    }, []);
+        const tableHeader = useMemo(
+            () => (
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-[280px]">Costume</TableHead>
+                        <TableHead className="w-[120px]">
+                            <SortButton sortKey="category" sortConfig={sortConfig} onSort={onSort}>
+                                Category
+                            </SortButton>
+                        </TableHead>
+                        <TableHead className="w-[140px]">
+                            <SortButton sortKey="rental_price" sortConfig={sortConfig} onSort={onSort}>
+                                Price
+                            </SortButton>
+                        </TableHead>
+                        <TableHead className="w-[120px]">
+                            <SortButton sortKey="status" sortConfig={sortConfig} onSort={onSort}>
+                                Status
+                            </SortButton>
+                        </TableHead>
+                        <TableHead className="w-[100px]">
+                            <SortButton sortKey="created_at" sortConfig={sortConfig} onSort={onSort}>
+                                Created
+                            </SortButton>
+                        </TableHead>
+                        <TableHead className="text-right w-[100px]">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+            ),
+            [sortConfig, onSort]
+        );
 
-    // Memoize the desktop table header
-    const tableHeader = useMemo(() => (
-        <TableHeader className="sticky top-0 z-10">
-            <TableRow>
-                <TableHead className="w-[300px]">Costume</TableHead>
-                <TableHead>
-                    <SortButton sortKey="category" sortConfig={sortConfig} onSort={onSort}>
-                        Category
-                    </SortButton>
-                </TableHead>
-                <TableHead>
-                    <SortButton sortKey="listing_type" sortConfig={sortConfig} onSort={onSort}>
-                        Listing Type
-                    </SortButton>
-                </TableHead>
-                <TableHead>
-                    <SortButton sortKey="main_rent_offer" sortConfig={sortConfig} onSort={onSort}>
-                        Price
-                    </SortButton>
-                </TableHead>
-                <TableHead>
-                    <SortButton sortKey="gender" sortConfig={sortConfig} onSort={onSort}>
-                        Gender
-                    </SortButton>
-                </TableHead>
-                <TableHead>
-                    <SortButton sortKey="sizes" sortConfig={sortConfig} onSort={onSort}>
-                        Sizes
-                    </SortButton>
-                </TableHead>
-                <TableHead>
-                    <SortButton sortKey="status" sortConfig={sortConfig} onSort={onSort}>
-                        Status
-                    </SortButton>
-                </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-        </TableHeader>
-    ), [sortConfig, onSort]);
+        const isEmpty = costumes.length === 0;
 
-    const isEmpty = costumes.length === 0;
+        return (
+            <div className="w-full">
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto rounded-md border">
+                    <Table className="min-w-[800px]">
+                        {tableHeader}
+                        <TableBody>
+                            {isEmpty ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-32">
+                                        <EmptyState />
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                costumes.map((costume, index) => (
+                                    <DesktopTableRow
+                                        key={getRowKey(costume, index)}
+                                        costume={costume}
+                                        index={index}
+                                        onViewCostume={onViewCostume}
+                                        onEditCostume={onEditCostume}
+                                        onDeleteCostume={onDeleteCostume}
+                                    />
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
 
-    return (
-        <div className="w-full">
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-                <Table className="min-w-[600px]">
-                    {tableHeader}
-                    <TableBody>
-                        {isEmpty ? (
-                            <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                                    <EmptyState />
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            costumes.map((costume, index) => (
-                                <DesktopTableRow
-                                    key={getRowKey(costume, index)}
+                {/* Mobile cards */}
+                <div className="md:hidden space-y-3">
+                    {isEmpty ? (
+                        <EmptyState />
+                    ) : (
+                        costumes.map((costume, index) => {
+                            const rowKey = getRowKey(costume, index);
+                            return (
+                                <MobileCard
+                                    key={rowKey}
                                     costume={costume}
                                     index={index}
+                                    isExpanded={expandedRows.has(rowKey)}
+                                    onToggleExpansion={() => toggleRowExpansion(rowKey)}
                                     onViewCostume={onViewCostume}
                                     onEditCostume={onEditCostume}
                                     onDeleteCostume={onDeleteCostume}
                                 />
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            );
+                        })
+                    )}
+                </div>
             </div>
+        );
+    }
+);
 
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-2">
-                {isEmpty ? (
-                    <EmptyState />
-                ) : (
-                    costumes.map((costume, index) => {
-                        const rowKey = getRowKey(costume, index);
-                        return (
-                            <MobileCard
-                                key={rowKey}
-                                costume={costume}
-                                index={index}
-                                isExpanded={expandedRows.has(rowKey)}
-                                onToggleExpansion={() => toggleRowExpansion(rowKey)}
-                                onViewCostume={onViewCostume}
-                                onEditCostume={onEditCostume}
-                                onDeleteCostume={onDeleteCostume}
-                            />
-                        );
-                    })
-                )}
-            </div>
-        </div>
-    );
-});
-
-CostumeTableSection.displayName = 'CostumeTableSection';
+CostumeTableSection.displayName = "CostumeTableSection";
 
 export default CostumeTableSection;

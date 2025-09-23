@@ -176,7 +176,7 @@ const SidebarLender = memo(() => {
         {
             title: "Community",
             icon: Users2Icon,
-            href: "/community",
+            href: "/lender/community",
         },
         {
             title: "Costumes",
@@ -184,7 +184,7 @@ const SidebarLender = memo(() => {
             children: [
                 { title: "Costume Grid", icon: Grid, href: "/lender/products/list" },
                 { title: "Add Costume", icon: PlusCircle, href: "/lender/products/create" },
-                { title: "Edit Costume", icon: Edit, href: "/lender/products/edit" }
+                /*  { title: "Edit Costume", icon: Edit, href: "/lender/products/edit" } */
             ]
         },
         {
@@ -192,21 +192,17 @@ const SidebarLender = memo(() => {
             icon: ShoppingCart,
             badge: 5, // Replace with actual data
             children: [
-                {
+                /* {
                     title: "Messages",
                     icon: MessageCircle,
                     href: "/messages",
                     badge: 3 // Replace with actual data
-                },
-                { title: "Rental List", icon: ListOrdered, href: "/lender/rental/list" },
-                { title: "Payment History", icon: CreditCard, href: "/lender/rental/payments" },
+                }, */
+                { title: "Rental List", icon: ListOrdered, href: "/lender/products/list" },
+                /*   { title: "Payment History", icon: CreditCard, href: "" }, */
             ]
         },
-        {
-            title: "Accounting",
-            icon: CreditCard,
-            href: "/lender/accounting",
-        },
+
         {
             title: "Settings",
             icon: Settings,
