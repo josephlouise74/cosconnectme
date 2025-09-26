@@ -22,8 +22,10 @@ export const useSupabaseAuth = () => {
         user: null,
         isLoading: true,
     })
-    /* 
-        const router = useRouter() */
+
+    const [shouldFetchRoles, setShouldFetchRoles] = useState(false)
+    const [retryCount, setRetryCount] = useState(0)
+    const maxRetries = 3
 
     const updateAuthState = useCallback((updates: Partial<AuthState>) => {
         setAuthState((prev) => ({
@@ -38,30 +40,49 @@ export const useSupabaseAuth = () => {
         isLoading: isRolesLoading,
         error: rolesError,
         refetch: refetchUserRoles,
-    } = useGetUserRoles(authState.user?.id || "", authState.isAuthenticated && !!authState.user?.id)
+    } = useGetUserRoles(
+        authState.user?.id || "",
+        shouldFetchRoles && authState.isAuthenticated && !!authState.user?.id
+    )
 
+    // Handle roles error with retry logic
     useEffect(() => {
-        if (rolesError) {
+        if (rolesError && authState.isAuthenticated && retryCount < maxRetries) {
             console.error("Error fetching user roles:", rolesError)
-            // Use metadata as fallback if available
+
+            // Retry after a delay
+            const retryTimer = setTimeout(() => {
+                console.log(`Retrying user roles fetch (attempt ${retryCount + 1}/${maxRetries})`)
+                setRetryCount(prev => prev + 1)
+                refetchUserRoles()
+            }, 2000 * (retryCount + 1)) // Exponential backoff: 2s, 4s, 6s
+
+            return () => clearTimeout(retryTimer)
+        }
+
+        // If we've exhausted retries, fall back to metadata
+        if (rolesError && retryCount >= maxRetries) {
+            console.warn("Max retries reached for user roles, falling back to metadata")
             if (authState.user?.user_metadata?.role) {
                 updateAuthState({
                     currentRole: authState.user.user_metadata.role as UserRole,
                 })
             }
         }
-    }, [rolesError, authState.user?.user_metadata?.role, updateAuthState])
+    }, [rolesError, authState.isAuthenticated, authState.user?.user_metadata?.role, updateAuthState, retryCount, refetchUserRoles])
 
     // Handle initial session and auth state changes
     useEffect(() => {
         const supabase = createClient()
         let mounted = true
 
-        const handleAuthChange = async (_: string, session: any) => {
+        const handleAuthChange = async (event: string, session: any) => {
             if (!mounted) return
 
             const user = session?.user || null
             const isAuthenticated = !!user
+
+            console.log("Auth state change:", event, { isAuthenticated, userId: user?.id })
 
             // Update auth state immediately
             updateAuthState({
@@ -70,6 +91,19 @@ export const useSupabaseAuth = () => {
                 isLoading: false,
                 currentRole: null, // Will be set by the roles data
             })
+
+            // Reset retry count on auth change
+            setRetryCount(0)
+
+            // Enable role fetching after authentication
+            if (isAuthenticated && user) {
+                // Small delay to ensure user is fully set up in the database
+                setTimeout(() => {
+                    setShouldFetchRoles(true)
+                }, 500)
+            } else {
+                setShouldFetchRoles(false)
+            }
         }
 
         // Check initial session
@@ -83,18 +117,25 @@ export const useSupabaseAuth = () => {
                 if (error) throw error
 
                 if (session?.user) {
+                    console.log("Initial session found:", session.user.id)
                     updateAuthState({
                         isAuthenticated: true,
                         user: session.user,
                         isLoading: false,
                     })
+                    // Enable role fetching
+                    setTimeout(() => {
+                        setShouldFetchRoles(true)
+                    }, 500)
                 } else {
+                    console.log("No initial session")
                     updateAuthState({
                         isAuthenticated: false,
                         user: null,
                         currentRole: null,
                         isLoading: false,
                     })
+                    setShouldFetchRoles(false)
                 }
             } catch (error) {
                 console.error("Error in getInitialSession:", error)
@@ -104,6 +145,7 @@ export const useSupabaseAuth = () => {
                     currentRole: null,
                     isLoading: false,
                 })
+                setShouldFetchRoles(false)
             }
         }
 
@@ -124,8 +166,8 @@ export const useSupabaseAuth = () => {
     // Update role when user roles data is loaded
     useEffect(() => {
         if (userRolesData && authState.isAuthenticated) {
-            console.log("[v0] userRolesData received:", userRolesData)
-            console.log("[v0] current_role from API:", userRolesData.current_role)
+            console.log("[useSupabaseAuth] userRolesData received:", userRolesData)
+            console.log("[useSupabaseAuth] current_role from API:", userRolesData.current_role)
 
             // Extract role with multiple fallbacks
             let extractedRole: UserRole | null = null
@@ -138,7 +180,7 @@ export const useSupabaseAuth = () => {
                 extractedRole = authState.user.user_metadata.role as UserRole
             }
 
-            console.log("[v0] extracted role:", extractedRole)
+            console.log("[useSupabaseAuth] extracted role:", extractedRole)
 
             // Only update if we have a valid role and it's different from current
             if (extractedRole && extractedRole !== authState.currentRole) {
@@ -146,11 +188,22 @@ export const useSupabaseAuth = () => {
                     ...prev,
                     currentRole: extractedRole,
                 }))
+                // Reset retry count on successful role fetch
+                setRetryCount(0)
             }
         }
     }, [userRolesData, authState.isAuthenticated, authState.user?.user_metadata?.role, authState.currentRole])
 
-    const isLoading = authState.isLoading || (authState.isAuthenticated && isRolesLoading)
+    // Manual retry function
+    const retryFetchRoles = useCallback(() => {
+        setRetryCount(0)
+        setShouldFetchRoles(false)
+        setTimeout(() => {
+            setShouldFetchRoles(true)
+        }, 100)
+    }, [])
+
+    const isLoading = authState.isLoading || (authState.isAuthenticated && shouldFetchRoles && isRolesLoading)
 
     return {
         // Core auth state
@@ -166,6 +219,11 @@ export const useSupabaseAuth = () => {
         userRolesData: userRolesData || null,
         rolesError: rolesError || null,
         refetchUserRoles,
+
+        // New retry functionality
+        retryFetchRoles,
+        retryCount,
+        maxRetries,
 
         // Auth actions
         signOut,

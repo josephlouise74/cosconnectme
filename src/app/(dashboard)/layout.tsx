@@ -18,13 +18,7 @@ export default function DashboardLayout({
   const { currentRole, isLoading, isAuthenticated } = useSupabaseAuth()
   const pathname = usePathname()
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-900" />
-      </div>
-    )
-  }
+
 
   return (
     <SocketProvider>

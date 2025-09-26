@@ -1,12 +1,11 @@
 
 import type { Metadata } from "next";
 /* import { Inter, Righteous, Pacifico } from "next/font/google"; */
-import "./globals.css";
-import Script from "next/script";
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/lib/styles/ThemeProvider";
 import { cn } from "@/lib/utils";
 import QueryProvider from "@/utils/QueryProvider";
-import { ThemeProvider } from "@/lib/styles/ThemeProvider";
-import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "CosConnect - Your Cosplay Costume Marketplace",

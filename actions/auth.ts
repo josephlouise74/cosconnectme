@@ -24,22 +24,6 @@ interface AuthResponse {
     user?: any;
 }
 
-export async function getUserSession() {
-    const supabase = await createClient()
-
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) {
-        return null;
-    }
-
-    // Return user without modifying it, role is in user_metadata
-    return {
-        status: "success",
-        user
-    };
-}
-
 export async function signUp(formData: SignUpData) {
     const supabase = await createClient()
 
@@ -78,13 +62,29 @@ export async function signUp(formData: SignUpData) {
             }
         }
     })
+    const userData = {
+        uid: authData.user?.id,
+        username: formData.username.toLowerCase(),
+        email: formData.email,
+        phone_number: formData.phoneNumber,
+        profile_image: '',
+        role: ['borrower'], // Role should be an array of strings
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    };
 
-    if (error) {
+    console.log('Attempting to insert user data:', userData);
+
+    const { error: insertError } = await supabase
+        .from("users")
+        .insert(userData);
+    if (insertError) {
         return {
-            status: error?.message,
+            status: insertError?.message,
             user: null
         }
-    } else if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+    }
+    if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
         return {
             status: "User with this email already exists",
             user: null
@@ -94,6 +94,24 @@ export async function signUp(formData: SignUpData) {
     revalidatePath("/", "layout")
     return { status: "success", user: authData.user }
 }
+
+export async function getUserSession() {
+    const supabase = await createClient()
+
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+        return null;
+    }
+
+    // Return user without modifying it, role is in user_metadata
+    return {
+        status: "success",
+        user
+    };
+}
+
+
 
 export async function signIn(formData: SignInData) {
     const supabase = await createClient();
