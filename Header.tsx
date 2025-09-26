@@ -2,13 +2,14 @@
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { cn } from '@/styles/theme';
+import { cn } from '@/lib/utils';
+import { getUserSession, signOut } from 'actions/auth';
+
 import { HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getUserSession, signOut } from '../../../actions/auth';
 
 const Header = () => {
     const [isOpen, setIsOpen] = useState(false);
