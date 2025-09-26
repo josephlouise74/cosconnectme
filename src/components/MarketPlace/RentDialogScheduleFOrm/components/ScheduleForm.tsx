@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, Clock, Info, MapPin, Truck } from "lucide-react"
-import { useMemo, useState, useEffect } from "react"
-import { useFormContext } from "react-hook-form"
-import { CostumeRentalInfo, PartialRentalBookingFormData } from "./type"
 import { BookedDateRange, useGetBookedDateRanges } from "@/lib/api/rentalApi"
+import { Calendar, Clock, Info, MapPin, Truck } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { useFormContext } from "react-hook-form"
+import { generateMonthData } from "../utils/calendarUtils"
+import { CostumeRentalInfo, PartialRentalBookingFormData } from "./type"
+import { toast } from "sonner"
 
 interface ScheduleFormProps {
     costumeInfo: CostumeRentalInfo
@@ -60,7 +62,6 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
 
     // Helper function to check if a date is within any booked range
     const isDateBooked = (date: Date, bookedRanges: BookedDateRange[]): boolean => {
-        const dateStr = date.toISOString().split('T')[0] // Convert to YYYY-MM-DD format
 
         return bookedRanges.some(range => {
             const startDate = new Date(range.start_date)
@@ -90,20 +91,15 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
     // Calculate rental info from form values
     const rentalInfo = useMemo(() => {
         if (!watchedStartDate || !watchedEndDate) return null
-
         try {
             const start = new Date(watchedStartDate)
             const end = new Date(watchedEndDate)
-
             if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
-
             start.setHours(0, 0, 0, 0)
             end.setHours(0, 0, 0, 0)
-
             const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-            const subtotal = Math.max(1, days) * (costumeInfo.dailyRate || 0)
+            const subtotal = Math.max(3, days) * (costumeInfo.dailyRate || 0) // Changed from Math.max(1, days) to Math.max(3, days)
             const securityDeposit = costumeInfo.securityDeposit || 0
-
             return {
                 days,
                 subtotal,
@@ -134,25 +130,32 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
     const handleDateClick = (date: Date) => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-
         // Prevent selection of past dates
         if (date < today) return
-
         // Prevent selection of unavailable dates from costume info
         if (costumeInfo.unavailableDates?.some((unavailable: Date) => {
             const unavailableDate = new Date(unavailable)
             unavailableDate.setHours(0, 0, 0, 0)
             return date.toDateString() === unavailableDate.toDateString()
         })) return
-
         // Prevent selection of booked dates
         if (isDateBooked(date, bookedDateRanges)) return
-
         if (!dateSelection.startDate || isSelectingEndDate) {
             if (isSelectingEndDate && dateSelection.startDate) {
                 // Selecting end date
                 const endDate = date > dateSelection.startDate ? date : dateSelection.startDate
                 const startDate = date > dateSelection.startDate ? dateSelection.startDate : date
+
+                // Calculate days difference
+                const daysDifference = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+
+                // Check minimum days requirement
+                if (daysDifference < 3) {
+                    toast.error("Minimum rental period is 3 days", {
+                        description: "Please select a date range of at least 3 days",
+                    })
+                    return
+                }
 
                 setDateSelection({ startDate, endDate })
                 setValue("schedule.start_date", startDate.toISOString())
@@ -175,6 +178,7 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
             setIsSelectingEndDate(true)
         }
     }
+
 
     const getDateClasses = (date: Date) => {
         const baseClasses =
@@ -236,7 +240,7 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
                 <Info className="h-4 w-4 text-rose-600" />
                 <AlertDescription className="text-rose-800">
                     <div className="flex flex-wrap gap-4 text-sm">
-                        <span>Min: {costumeInfo.minRentalDays} days</span>
+                        <span>Min: 3 days</span> {/* Changed from {costumeInfo.minRentalDays} to 3 */}
                         <span>Max: {costumeInfo.maxRentalDays} days</span>
                         <span>Daily rate: ₱{costumeInfo.dailyRate}</span>
                         <span className="font-semibold text-rose-700">Delivery Only</span>
@@ -478,71 +482,6 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
     )
 }
 
-// Helper function to generate month data with booked dates
-const generateMonthData = (
-    monthStart: Date,
-    unavailableDates: Date[],
-    bookedDateRanges: BookedDateRange[]
-): MonthData => {
-    const year = monthStart.getFullYear()
-    const month = monthStart.getMonth()
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
 
-    const firstDay = new Date(year, month, 1)
-    const startDate = new Date(firstDay)
-    startDate.setDate(startDate.getDate() - firstDay.getDay())
-
-    const days: (CalendarDay | null)[] = []
-
-    // Helper function to check if date is booked
-    const isDateBookedHelper = (date: Date): boolean => {
-        const dateStr = date.toISOString().split('T')[0]
-
-        return bookedDateRanges.some(range => {
-            const startDate = new Date(range.start_date)
-            const endDate = new Date(range.end_date)
-
-            startDate.setHours(0, 0, 0, 0)
-            endDate.setHours(23, 59, 59, 999)
-            date.setHours(12, 0, 0, 0)
-
-            return date >= startDate && date <= endDate
-        })
-    }
-
-    for (let i = 0; i < 42; i++) {
-        const currentDate = new Date(startDate)
-        currentDate.setDate(startDate.getDate() + i)
-        currentDate.setHours(0, 0, 0, 0)
-
-        if (currentDate.getMonth() === month) {
-            const isUnavailable = unavailableDates.some(unavailable => {
-                const unavailableDate = new Date(unavailable)
-                unavailableDate.setHours(0, 0, 0, 0)
-                return currentDate.toDateString() === unavailableDate.toDateString()
-            })
-
-            const isBooked = isDateBookedHelper(currentDate)
-
-            days.push({
-                date: currentDate,
-                isPast: currentDate < today,
-                isUnavailable,
-                isBooked,
-                isCurrentMonth: true,
-            })
-        } else {
-            days.push(null)
-        }
-    }
-
-    return {
-        month,
-        year,
-        monthName: firstDay.toLocaleString("default", { month: "long" }),
-        days,
-    }
-}
 
 export { ScheduleForm }

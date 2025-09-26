@@ -48,9 +48,17 @@ export interface LenderAddress {
 }
 
 export interface LenderInfo {
+    uid: string
+    name: string
+    email: string
+    profile_image: string | null
     business_name: string
     business_description: string
-    business_type: "INDIVIDUAL" | "REGISTERED"
+    business_type: "INDIVIDUAL" | "STORE" | "REGISTERED"
+    business_email: string
+    business_phone: string
+    business_profile_image: string | null
+    business_background_image: string | null
     contact: LenderContact
     images: LenderImages
     address: LenderAddress
@@ -66,16 +74,57 @@ export interface CostumeByName {
     sizes: string
     tags: string[]
     listing_type: "rent" | "sell"
-    pricing: CostumePricing
-    images: CostumeImages
+    rental_price: string
+    sale_price: string
+    security_deposit: string
+    discount_percentage: number
+    extended_days_price: string
+    main_images: {
+        front: string
+        back: string
+    }
+    additional_images: any[]
     view_count: number
     favorite_count: number
     created_at: string
     updated_at: string
+    status: string
+    is_available: boolean
+
+    // Lender fields (flattened in response)
+    user_email: string
+    user_name: string
+    user_profile_image: string
+    business_name: string
+    business_description: string
+    business_type: "INDIVIDUAL" | "STORE" | "REGISTERED"
+    business_email: string
+    business_phone: string
+    business_profile_image: string | null
+    business_background_image: string | null
+    address_street: string
+    address_barangay: string
+    address_city: {
+        id: string
+        name: string
+    }
+    address_province: string
+    address_region: string
+    address_zip_code: string
+    address_country: string
+
+    // Additional fields
+    add_ons: any[]
+    booked_dates: string[]
+
+    // Computed properties for backward compatibility
+    pricing: CostumePricing
+    images: CostumeImages
     lender: LenderInfo
 }
 
 export interface GetCostumeByNameResponse {
     success: boolean
+    message: string
     data: CostumeByName
 }

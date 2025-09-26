@@ -213,7 +213,7 @@ const Header = () => {
                     )}
 
                     <SwitchRoleButton
-                        afterSwitch={window.location.reload}
+                        afterSwitch={() => window.location.reload()}
                         iconOnly
                     />
 
@@ -264,8 +264,8 @@ const Header = () => {
 
                                 <div className='flex items-center justify-center'>
                                     <SwitchRoleButton
-                                    afterSwitch={window.location.reload}
-                                    iconOnly />
+                                        afterSwitch={() => window.location.reload()}
+                                        iconOnly />
                                 </div>
 
                                 {/* User Section */}

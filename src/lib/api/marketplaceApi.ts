@@ -4,33 +4,42 @@ import { useQuery } from "@tanstack/react-query";
 
 import { GetMarketplaceCostumesResponse } from "../types/marketplaceType";
 import { ApiError, axiosApiClient } from "./axiosApiClient";
-import { GetCostumeByNameResponse } from "../types/marketplace/get-costume";
+import { CostumeByName } from "../types/marketplace/get-costume";
+
+
+
+export interface GetCostumeByNameResponse {
+    success: boolean
+    message: string
+    data: CostumeByName
+}
 
 export const useGetMarketCostumeById = (id: string, enabled: boolean = true) => {
     const getMarketCostumeById = async (): Promise<GetCostumeByNameResponse> => {
         try {
-            console.log("Fetching costume by id:", encodeURIComponent(id));
+            console.log("Fetching costume by id:", id);
             const response = await axiosApiClient.get<GetCostumeByNameResponse>(
-                `marketplace/costume/${id}`
+                `/marketplace/costume/${encodeURIComponent(id)}`
             );
 
+            console.log("API Response:", response.data);
+
             if (!response.data.success) {
-                throw new Error(response.data?.data ? "Costume not found" : "Failed to fetch costume");
+                throw new Error(response.data.message || "Failed to fetch costume");
             }
 
             return response.data;
         } catch (error: unknown) {
             const apiError = error as ApiError;
+            console.error("API Error:", apiError);
 
             if (apiError.response?.status === 404) {
-                return {
-                    success: true,
-                    data: {} as any, // empty placeholder
-                };
+                throw new Error("Costume not found");
             }
 
             throw new Error(
                 apiError.response?.data?.message ||
+                apiError.message ||
                 `Failed to fetch costume: ${apiError.response?.status || "Unknown error"}`
             );
         }
@@ -39,11 +48,12 @@ export const useGetMarketCostumeById = (id: string, enabled: boolean = true) => 
     const query = useQuery({
         queryKey: ["marketplace", "costume", id],
         queryFn: getMarketCostumeById,
-        enabled: enabled && !!id, // only run if id is provided and enabled
+        enabled: enabled && !!id && id !== "",
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
         refetchOnWindowFocus: false,
         retry: (failureCount, error: any) => {
+            // Don't retry for 4xx errors
             if (error?.response?.status >= 400 && error?.response?.status < 500) {
                 return false;
             }
@@ -57,7 +67,7 @@ export const useGetMarketCostumeById = (id: string, enabled: boolean = true) => 
         isLoading: query.isLoading,
         isError: query.isError,
         error: query.error,
-        costume: query.data?.data, // returns CostumeByName
+        costume: query.data?.data,
         refetch: query.refetch,
         isSuccess: query.isSuccess,
     };
