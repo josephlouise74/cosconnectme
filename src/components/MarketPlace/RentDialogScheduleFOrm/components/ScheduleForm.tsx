@@ -130,9 +130,11 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
     const handleDateClick = (date: Date) => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        // Prevent selection of past dates
-        if (date < today) return
-        // Prevent selection of unavailable dates from costume info
+
+        // Prevent selection of past dates OR today
+        if (date <= today) return
+
+        // Prevent selection of unavailable dates
         if (costumeInfo.unavailableDates?.some((unavailable: Date) => {
             const unavailableDate = new Date(unavailable)
             unavailableDate.setHours(0, 0, 0, 0)
@@ -140,9 +142,10 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
         })) return
         // Prevent selection of booked dates
         if (isDateBooked(date, bookedDateRanges)) return
+
+        // Existing selection logic...
         if (!dateSelection.startDate || isSelectingEndDate) {
             if (isSelectingEndDate && dateSelection.startDate) {
-                // Selecting end date
                 const endDate = date > dateSelection.startDate ? date : dateSelection.startDate
                 const startDate = date > dateSelection.startDate ? dateSelection.startDate : date
 
@@ -162,7 +165,6 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
                 setValue("schedule.end_date", endDate.toISOString())
                 setIsSelectingEndDate(false)
             } else {
-                // Selecting start date
                 const startDate = date
                 setDateSelection({ startDate, endDate: null })
                 setValue("schedule.start_date", startDate.toISOString())
@@ -170,7 +172,6 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
                 setIsSelectingEndDate(true)
             }
         } else {
-            // Reset selection
             const startDate = date
             setDateSelection({ startDate, endDate: null })
             setValue("schedule.start_date", startDate.toISOString())
@@ -205,6 +206,9 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
             date >= dateSelection.startDate &&
             date <= dateSelection.endDate
 
+        if (isToday) {
+            return `${baseClasses} bg-blue-100 text-blue-700 font-bold cursor-not-allowed`
+        }
         if (isPast || isUnavailable) {
             return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`
         }

@@ -23,8 +23,8 @@ const SigninSchema = z.object({
 
 type SigninFormData = z.infer<typeof SigninSchema>;
 
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 7;
+const LOCKOUT_TIME = 10 * 60 * 1000; // 10 minutes
 
 const UserSignIn = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -231,7 +231,7 @@ const UserSignIn = () => {
                                                                     "pl-10 h-12",
                                                                     fieldErrors.email && "border-destructive focus-visible:ring-destructive"
                                                                 )}
-                                                                disabled={isLoading || isGoogleLoading || isLockedOut}
+                                                                disabled={isLoading || isGoogleLoading || isLockedOut as any}
                                                                 autoComplete="email"
                                                                 {...field}
                                                             />
@@ -258,7 +258,7 @@ const UserSignIn = () => {
                                                                     "pl-10 h-12",
                                                                     fieldErrors.password && "border-destructive focus-visible:ring-destructive"
                                                                 )}
-                                                                disabled={isLoading || isGoogleLoading || isLockedOut}
+                                                                disabled={isLoading || isGoogleLoading || isLockedOut as any}
                                                                 autoComplete="current-password"
                                                                 {...field}
                                                             />
@@ -267,7 +267,7 @@ const UserSignIn = () => {
                                                                 tabIndex={-1}
                                                                 onClick={() => setShowPassword((v) => !v)}
                                                                 className="absolute right-3 top-3 text-muted-foreground hover:text-primary focus:outline-none"
-                                                                disabled={isLoading || isGoogleLoading || isLockedOut}
+                                                                disabled={isLoading || isGoogleLoading || isLockedOut as any}
                                                             >
                                                                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                                             </button>
