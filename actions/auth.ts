@@ -24,76 +24,66 @@ interface AuthResponse {
     user?: any;
 }
 
-export async function signUp(formData: SignUpData) {
-    const supabase = await createClient()
+export async function signUp(formData: SignUpData): Promise<AuthResponse> {
+    const supabase = await createClient();
 
-    // Check if username already exists in users table
+    // Check if username exists
     const { data: existingUser, error: checkError } = await supabase
-        .from('users')
-        .select('username')
-        .eq('username', formData.username.toLowerCase())
-        .single();
+        .from("users")
+        .select("id") // selecting id is enough
+        .eq("username", formData.username.toLowerCase())
+        .maybeSingle();
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-        console.error('Error checking username:', checkError);
-        return {
-            status: "Error checking username availability",
-            user: null
-        }
+    if (checkError) {
+        return { status: "error", message: "Error checking username availability" };
     }
 
     if (existingUser) {
-        return {
-            status: "Username already taken",
-            user: null
-        }
+        return { status: "error", message: "Username already taken" };
     }
 
-    // Proceed with sign up if username is available
-    const { error, data: authData } = await supabase.auth.signUp({
+    // Sign up with Supabase Auth
+    const { data: authData, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: {
-            data: {
-                role: formData.role,
-                username: formData.username.toLowerCase(),
-                phone_number: formData.phoneNumber,
-                created_at: new Date().toISOString()
-            }
-        }
-    })
+    });
+
+    if (error) {
+        return { status: "error", message: error.message };
+    }
+
+    if (!authData.user) {
+        return { status: "error", message: "Sign-up failed, no user returned" };
+    }
+
+    if (authData.user.identities?.length === 0) {
+        return { status: "error", message: "User with this email already exists" };
+    }
+
+    // Prepare userData for table
     const userData = {
-        uid: authData.user?.id,
+        uid: authData.user.id,
         username: formData.username.toLowerCase(),
         email: formData.email,
         phone_number: formData.phoneNumber,
-        profile_image: '',
-        role: ['borrower'], // Role should be an array of strings
+        profile_image: "",
+        role: ["borrower"],
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
     };
 
-    console.log('Attempting to insert user data:', userData);
+    // Insert into users table
+    const { error: insertError } = await supabase.from("users").insert(userData);
 
-    const { error: insertError } = await supabase
-        .from("users")
-        .insert(userData);
     if (insertError) {
-        return {
-            status: insertError?.message,
-            user: null
-        }
-    }
-    if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
-        return {
-            status: "User with this email already exists",
-            user: null
-        }
+        console.error("Insert error:", insertError);
+        return { status: "error", message: "Failed to insert user record" };
     }
 
-    revalidatePath("/", "layout")
-    return { status: "success", user: authData.user }
+    revalidatePath("/", "layout");
+    return { status: "success", message: "User created", user: userData };
 }
+
 
 export async function getUserSession() {
     const supabase = await createClient()
@@ -348,9 +338,8 @@ export async function signInWithGoogle() {
                 redirectTo: `${origin}/auth/callback`,
                 queryParams: {
                     access_type: 'offline',
-                    prompt: 'consent',
+                    prompt: 'select_account login',
                 },
-                // Add scopes if needed
                 scopes: 'openid email profile'
             }
         });

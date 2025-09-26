@@ -7,12 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, Clock, Info, MapPin, Truck } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useFormContext } from "react-hook-form"
 import { CostumeRentalInfo, PartialRentalBookingFormData } from "./type"
+import { BookedDateRange, useGetBookedDateRanges } from "@/lib/api/rentalApi"
 
 interface ScheduleFormProps {
     costumeInfo: CostumeRentalInfo
+    costumeId: string // Add costumeId prop to fetch booked dates
 }
 
 interface DateSelection {
@@ -24,6 +26,7 @@ interface CalendarDay {
     date: Date
     isPast: boolean
     isUnavailable: boolean
+    isBooked: boolean // New field for booked dates
     isCurrentMonth: boolean
 }
 
@@ -34,7 +37,7 @@ interface MonthData {
     days: (CalendarDay | null)[]
 }
 
-const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
+const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
     const {
         control,
         watch,
@@ -47,10 +50,30 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         endDate: null,
     })
     const [isSelectingEndDate, setIsSelectingEndDate] = useState(false)
-
-    // Watch the form values using the correct field names from schema
+    console.log(costumeId)
+    // Fetch booked dates for this costume
+    const { bookedDateRanges, isFetching } = useGetBookedDateRanges(costumeId)
+    console.log(bookedDateRanges)
+    // Watch the form values
     const watchedStartDate = watch("schedule.start_date")
     const watchedEndDate = watch("schedule.end_date")
+
+    // Helper function to check if a date is within any booked range
+    const isDateBooked = (date: Date, bookedRanges: BookedDateRange[]): boolean => {
+        const dateStr = date.toISOString().split('T')[0] // Convert to YYYY-MM-DD format
+
+        return bookedRanges.some(range => {
+            const startDate = new Date(range.start_date)
+            const endDate = new Date(range.end_date)
+
+            // Set hours to avoid timezone issues
+            startDate.setHours(0, 0, 0, 0)
+            endDate.setHours(23, 59, 59, 999)
+            date.setHours(12, 0, 0, 0) // Set to noon to avoid edge cases
+
+            return date >= startDate && date <= endDate
+        })
+    }
 
     // Generate calendar days for current and next month
     const calendarData = useMemo<MonthData[]>(() => {
@@ -59,24 +82,21 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1)
 
         return [
-            generateMonthData(currentMonth, costumeInfo.unavailableDates || []),
-            generateMonthData(nextMonth, costumeInfo.unavailableDates || []),
+            generateMonthData(currentMonth, costumeInfo.unavailableDates || [], bookedDateRanges),
+            generateMonthData(nextMonth, costumeInfo.unavailableDates || [], bookedDateRanges),
         ]
-    }, [costumeInfo.unavailableDates])
+    }, [costumeInfo.unavailableDates, bookedDateRanges])
 
-    // Calculate rental info from form values (which are ISO strings)
+    // Calculate rental info from form values
     const rentalInfo = useMemo(() => {
         if (!watchedStartDate || !watchedEndDate) return null
 
         try {
-            // Parse ISO strings to dates
             const start = new Date(watchedStartDate)
             const end = new Date(watchedEndDate)
 
-            // Ensure dates are valid
             if (isNaN(start.getTime()) || isNaN(end.getTime())) return null
 
-            // Set to start of day for accurate calculation
             start.setHours(0, 0, 0, 0)
             end.setHours(0, 0, 0, 0)
 
@@ -96,7 +116,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
     }, [watchedStartDate, watchedEndDate, costumeInfo.dailyRate, costumeInfo.securityDeposit])
 
     // Sync local state with form values on load
-    useState(() => {
+    useEffect(() => {
         if (watchedStartDate) {
             const startDate = new Date(watchedStartDate)
             if (!isNaN(startDate.getTime())) {
@@ -109,19 +129,24 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 setDateSelection(prev => ({ ...prev, endDate }))
             }
         }
-    })
+    }, [watchedStartDate, watchedEndDate])
 
     const handleDateClick = (date: Date) => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
-        if (date <= today) return
+        // Prevent selection of past dates
+        if (date < today) return
 
+        // Prevent selection of unavailable dates from costume info
         if (costumeInfo.unavailableDates?.some((unavailable: Date) => {
             const unavailableDate = new Date(unavailable)
             unavailableDate.setHours(0, 0, 0, 0)
             return date.toDateString() === unavailableDate.toDateString()
         })) return
+
+        // Prevent selection of booked dates
+        if (isDateBooked(date, bookedDateRanges)) return
 
         if (!dateSelection.startDate || isSelectingEndDate) {
             if (isSelectingEndDate && dateSelection.startDate) {
@@ -130,32 +155,23 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 const startDate = date > dateSelection.startDate ? dateSelection.startDate : date
 
                 setDateSelection({ startDate, endDate })
-
-                // Set form values as ISO strings (matching schema)
                 setValue("schedule.start_date", startDate.toISOString())
                 setValue("schedule.end_date", endDate.toISOString())
-
                 setIsSelectingEndDate(false)
             } else {
                 // Selecting start date
                 const startDate = date
                 setDateSelection({ startDate, endDate: null })
-
-                // Set form values as ISO strings
                 setValue("schedule.start_date", startDate.toISOString())
                 setValue("schedule.end_date", "")
-
                 setIsSelectingEndDate(true)
             }
         } else {
             // Reset selection
             const startDate = date
             setDateSelection({ startDate, endDate: null })
-
-            // Set form values as ISO strings
             setValue("schedule.start_date", startDate.toISOString())
             setValue("schedule.end_date", "")
-
             setIsSelectingEndDate(true)
         }
     }
@@ -173,6 +189,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
             unavailableDate.setHours(0, 0, 0, 0)
             return date.toDateString() === unavailableDate.toDateString()
         }) || false
+        const isBooked = isDateBooked(date, bookedDateRanges)
 
         const isSelected =
             (dateSelection.startDate && date.toDateString() === dateSelection.startDate.toDateString()) ||
@@ -187,9 +204,9 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         if (isPast || isUnavailable) {
             return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`
         }
-        if (isToday) {
-            return `${baseClasses} bg-rose-50 text-rose-400 border border-rose-100 cursor-not-allowed`
-        }        
+        if (isBooked) {
+            return `${baseClasses} bg-red-100 text-red-600 cursor-not-allowed line-through`
+        }
         if (isSelected) {
             return `${baseClasses} bg-rose-500 text-white hover:bg-rose-600`
         }
@@ -223,9 +240,26 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                         <span>Max: {costumeInfo.maxRentalDays} days</span>
                         <span>Daily rate: ₱{costumeInfo.dailyRate}</span>
                         <span className="font-semibold text-rose-700">Delivery Only</span>
+                        {isFetching && <span className="text-blue-600">Loading booked dates...</span>}
                     </div>
                 </AlertDescription>
             </Alert>
+
+            {/* Legend for date colors */}
+            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-100 rounded border"></div>
+                    <span>Past/Unavailable</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-red-100 rounded border"></div>
+                    <span>Already Booked</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-rose-500 rounded border"></div>
+                    <span>Selected</span>
+                </div>
+            </div>
 
             {/* Custom Calendar */}
             <Card>
@@ -242,8 +276,8 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {calendarData.map((monthData, _) => (
-                            <div key={monthData.month} className="space-y-4">
+                        {calendarData.map((monthData, index) => (
+                            <div key={`${monthData.month}-${monthData.year}`} className="space-y-4">
                                 <h3 className="text-lg font-semibold text-center">
                                     {monthData.monthName} {monthData.year}
                                 </h3>
@@ -259,14 +293,23 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
 
                                 {/* Calendar grid */}
                                 <div className="grid grid-cols-7 gap-1">
-                                    {monthData.days.map((day, index) => (
-                                        <div key={index} className="aspect-square">
+                                    {monthData.days.map((day, dayIndex) => (
+                                        <div key={dayIndex} className="aspect-square">
                                             {day ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => handleDateClick(day.date)}
                                                     className={getDateClasses(day.date)}
-                                                    disabled={day.isPast || day.isUnavailable}
+                                                    disabled={day.isPast || day.isUnavailable || day.isBooked}
+                                                    title={
+                                                        day.isBooked
+                                                            ? "This date is already booked"
+                                                            : day.isPast
+                                                                ? "Past date"
+                                                                : day.isUnavailable
+                                                                    ? "Unavailable"
+                                                                    : ""
+                                                    }
                                                 >
                                                     {day.date.getDate()}
                                                 </button>
@@ -373,7 +416,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Clock className="h-5 w-5 text-rose-500" />
-                        Special Instructions  (Landmark)
+                        Special Instructions (Landmark)
                     </CardTitle>
                     <CardDescription>Any special requests or notes for your rental? (Optional)</CardDescription>
                 </CardHeader>
@@ -435,8 +478,12 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
     )
 }
 
-// Helper function to generate month data
-const generateMonthData = (monthStart: Date, unavailableDates: Date[]): MonthData => {
+// Helper function to generate month data with booked dates
+const generateMonthData = (
+    monthStart: Date,
+    unavailableDates: Date[],
+    bookedDateRanges: BookedDateRange[]
+): MonthData => {
     const year = monthStart.getFullYear()
     const month = monthStart.getMonth()
     const today = new Date()
@@ -444,11 +491,26 @@ const generateMonthData = (monthStart: Date, unavailableDates: Date[]): MonthDat
 
     const firstDay = new Date(year, month, 1)
     const startDate = new Date(firstDay)
-    startDate.setDate(startDate.getDate() - firstDay.getDay()) // Start from Sunday
+    startDate.setDate(startDate.getDate() - firstDay.getDay())
 
     const days: (CalendarDay | null)[] = []
 
-    // Generate calendar grid (6 weeks * 7 days = 42 cells)
+    // Helper function to check if date is booked
+    const isDateBookedHelper = (date: Date): boolean => {
+        const dateStr = date.toISOString().split('T')[0]
+
+        return bookedDateRanges.some(range => {
+            const startDate = new Date(range.start_date)
+            const endDate = new Date(range.end_date)
+
+            startDate.setHours(0, 0, 0, 0)
+            endDate.setHours(23, 59, 59, 999)
+            date.setHours(12, 0, 0, 0)
+
+            return date >= startDate && date <= endDate
+        })
+    }
+
     for (let i = 0; i < 42; i++) {
         const currentDate = new Date(startDate)
         currentDate.setDate(startDate.getDate() + i)
@@ -461,14 +523,17 @@ const generateMonthData = (monthStart: Date, unavailableDates: Date[]): MonthDat
                 return currentDate.toDateString() === unavailableDate.toDateString()
             })
 
+            const isBooked = isDateBookedHelper(currentDate)
+
             days.push({
                 date: currentDate,
                 isPast: currentDate < today,
                 isUnavailable,
+                isBooked,
                 isCurrentMonth: true,
             })
         } else {
-            days.push(null) // Empty cell for dates not in current month
+            days.push(null)
         }
     }
 

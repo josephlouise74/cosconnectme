@@ -39,7 +39,7 @@ const CancelledPaymentPage = () => {
 
                     <div className="flex flex-col gap-3">
                         <Button asChild className="w-full">
-                            <Link href="/dashboard">
+                            <Link href="/">
                                 Return to Dashboard
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>

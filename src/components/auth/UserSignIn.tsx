@@ -1,5 +1,4 @@
 "use client";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -12,7 +11,7 @@ import { Loader2, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -24,6 +23,9 @@ const SigninSchema = z.object({
 
 type SigninFormData = z.infer<typeof SigninSchema>;
 
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+
 const UserSignIn = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -32,6 +34,8 @@ const UserSignIn = () => {
         email?: string;
         password?: string;
     }>({});
+    const [attempts, setAttempts] = useState(0);
+    const [lockoutEnd, setLockoutEnd] = useState<number | null>(null);
     const router = useRouter();
 
     const form = useForm<SigninFormData>({
@@ -39,9 +43,65 @@ const UserSignIn = () => {
         defaultValues: { email: "", password: "" },
     });
 
+    // Load lockout state from localStorage on component mount
+    useEffect(() => {
+        const storedAttempts = Number(localStorage.getItem("loginAttempts")) || 0;
+        const storedLockout = Number(localStorage.getItem("lockoutEnd")) || null;
+        setAttempts(storedAttempts);
+
+        if (storedLockout && storedLockout > Date.now()) {
+            setLockoutEnd(storedLockout);
+        } else if (storedLockout) {
+            // Clear expired lockout
+            localStorage.removeItem("loginAttempts");
+            localStorage.removeItem("lockoutEnd");
+        }
+    }, []);
+
+    // Check and clear lockout periodically
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (lockoutEnd && lockoutEnd <= Date.now()) {
+                setAttempts(0);
+                setLockoutEnd(null);
+                localStorage.removeItem("loginAttempts");
+                localStorage.removeItem("lockoutEnd");
+            }
+        }, 1000); // Check every second
+
+        return () => clearInterval(interval);
+    }, [lockoutEnd]);
+
+    const incrementAttempts = useCallback(() => {
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        localStorage.setItem("loginAttempts", String(newAttempts));
+
+        if (newAttempts >= MAX_ATTEMPTS) {
+            const lockoutUntil = Date.now() + LOCKOUT_TIME;
+            setLockoutEnd(lockoutUntil);
+            localStorage.setItem("lockoutEnd", String(lockoutUntil));
+            toast.error("Too many failed attempts. Please wait 15 minutes before trying again.");
+        }
+        return newAttempts;
+    }, [attempts]);
+
+    const resetAttempts = useCallback(() => {
+        setAttempts(0);
+        setLockoutEnd(null);
+        localStorage.removeItem("loginAttempts");
+        localStorage.removeItem("lockoutEnd");
+    }, []);
+
     const onSubmit = useCallback(async (values: SigninFormData) => {
+        if (lockoutEnd && lockoutEnd > Date.now()) {
+            const minutesLeft = Math.ceil((lockoutEnd - Date.now()) / (1000 * 60));
+            toast.error(`Too many failed attempts. Please wait ${minutesLeft} minutes before trying again.`);
+            return;
+        }
+
         setIsLoading(true);
-        setFieldErrors({}); // Clear previous errors
+        setFieldErrors({});
 
         try {
             const result = await signIn({
@@ -51,9 +111,17 @@ const UserSignIn = () => {
 
             if (result.status === "success") {
                 toast.success("Signed in successfully!");
-                router.push("/"); // Redirect to dashboard
+                resetAttempts();
+                router.push("/");
             } else {
-                // Handle specific error messages
+                const newAttempts = incrementAttempts();
+
+                if (newAttempts >= MAX_ATTEMPTS) {
+                    // User is now locked out
+                    return;
+                }
+
+                // Handle different error types
                 if (result.status?.includes("Invalid login credentials")) {
                     toast.error("Invalid email or password. Please try again.");
                     setFieldErrors({
@@ -70,18 +138,14 @@ const UserSignIn = () => {
                     });
                 } else if (result.status?.includes("Email not confirmed")) {
                     toast.error("Please verify your email address before signing in.");
-                    setFieldErrors({
-                        email: "Please verify your email first"
-                    });
+                    setFieldErrors({ email: "Please verify your email first" });
                     form.setError("email", {
                         type: "manual",
                         message: "Please verify your email first"
                     });
                 } else if (result.status?.includes("User not found")) {
                     toast.error("No account found with this email address.");
-                    setFieldErrors({
-                        email: "No account found with this email"
-                    });
+                    setFieldErrors({ email: "No account found with this email" });
                     form.setError("email", {
                         type: "manual",
                         message: "No account found with this email"
@@ -94,41 +158,37 @@ const UserSignIn = () => {
             }
         } catch (error) {
             console.error("Sign-in error:", error);
+            incrementAttempts();
             toast.error("An unexpected error occurred. Please try again later.");
         } finally {
             setIsLoading(false);
         }
-    }, [form, router]);
+    }, [lockoutEnd, form, router, incrementAttempts, resetAttempts]);
 
     const handleGoogleSignIn = useCallback(async () => {
+        if (lockoutEnd && lockoutEnd > Date.now()) {
+            const minutesLeft = Math.ceil((lockoutEnd - Date.now()) / (1000 * 60));
+            toast.error(`Too many failed attempts. Please wait ${minutesLeft} minutes before trying again.`);
+            return;
+        }
+
         setIsGoogleLoading(true);
         try {
-            // Get the OAuth URL from Supabase
             const response = await signInWithGoogle();
-            console.log("Google Sign-in Response:", response);
-
             if (response.success && response.url) {
-                console.log("Redirecting to Google OAuth URL:", response.url);
-                // Redirect to Google OAuth
                 window.location.href = response.url;
             } else {
                 throw new Error("No OAuth URL received");
             }
         } catch (error: any) {
             console.error("Google sign-in error:", error);
-
-            // Handle specific error types
-            if (error.message?.includes("redirect_uri_mismatch")) {
-                toast.error("OAuth configuration error. Please contact support.");
-            } else if (error.message?.includes("Could not determine origin URL")) {
-                toast.error("Unable to determine app URL. Please refresh and try again.");
-            } else {
-                toast.error("Failed to sign in with Google. Please try again.");
-            }
-
+            toast.error("Failed to sign in with Google. Please try again.");
+        } finally {
             setIsGoogleLoading(false);
         }
-    }, []);
+    }, [lockoutEnd]);
+
+    const isLockedOut = lockoutEnd && lockoutEnd > Date.now();
 
     return (
         <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-background">
@@ -137,18 +197,20 @@ const UserSignIn = () => {
                 <div className="w-full max-w-md">
                     <Card className="w-full shadow-lg border-0">
                         <CardContent className="p-8 space-y-8">
-                            {/* Header Section */}
                             <div className="space-y-3 text-center">
-                                <h2 className="text-2xl font-bold">
-                                    Welcome Back!
-                                </h2>
-                                <p className="text-muted-foreground">
-                                    Sign in to start renting costumes
-                                </p>
+                                <h2 className="text-2xl font-bold">Welcome Back!</h2>
+                                <p className="text-muted-foreground">Sign in to start renting costumes</p>
                             </div>
 
+                            {isLockedOut && (
+                                <div className="bg-destructive/10 border border-destructive/20 rounded-md p-4 text-center">
+                                    <p className="text-destructive font-medium">
+                                        Too many failed attempts. Please wait{" "}
+                                        {Math.ceil((lockoutEnd! - Date.now()) / (1000 * 60))} minutes before trying again.
+                                    </p>
+                                </div>
+                            )}
 
-                            {/* Form Section */}
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                                     <div className="space-y-5">
@@ -169,18 +231,9 @@ const UserSignIn = () => {
                                                                     "pl-10 h-12",
                                                                     fieldErrors.email && "border-destructive focus-visible:ring-destructive"
                                                                 )}
-                                                                disabled={isLoading || isGoogleLoading}
+                                                                disabled={isLoading || isGoogleLoading || isLockedOut}
                                                                 autoComplete="email"
                                                                 {...field}
-                                                                onChange={(e) => {
-                                                                    field.onChange(e);
-                                                                    if (fieldErrors.email) {
-                                                                        const newErrors = { ...fieldErrors };
-                                                                        delete newErrors.email;
-                                                                        setFieldErrors(newErrors);
-                                                                        form.clearErrors("email");
-                                                                    }
-                                                                }}
                                                             />
                                                         </div>
                                                     </FormControl>
@@ -188,7 +241,6 @@ const UserSignIn = () => {
                                                 </FormItem>
                                             )}
                                         />
-
                                         {/* Password Field */}
                                         <FormField
                                             control={form.control}
@@ -206,25 +258,17 @@ const UserSignIn = () => {
                                                                     "pl-10 h-12",
                                                                     fieldErrors.password && "border-destructive focus-visible:ring-destructive"
                                                                 )}
-                                                                disabled={isLoading || isGoogleLoading}
+                                                                disabled={isLoading || isGoogleLoading || isLockedOut}
                                                                 autoComplete="current-password"
                                                                 {...field}
-                                                                onChange={(e) => {
-                                                                    field.onChange(e);
-                                                                    if (fieldErrors.password) {
-                                                                        const newErrors = { ...fieldErrors };
-                                                                        delete newErrors.password;
-                                                                        setFieldErrors(newErrors);
-                                                                        form.clearErrors("password");
-                                                                    }
-                                                                }}
                                                             />
                                                             <button
                                                                 type="button"
                                                                 tabIndex={-1}
                                                                 onClick={() => setShowPassword((v) => !v)}
                                                                 className="absolute right-3 top-3 text-muted-foreground hover:text-primary focus:outline-none"
-                                                                >
+                                                                disabled={isLoading || isGoogleLoading || isLockedOut}
+                                                            >
                                                                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                                             </button>
                                                         </div>
@@ -233,27 +277,25 @@ const UserSignIn = () => {
                                                 </FormItem>
                                             )}
                                         />
-
-                                        {/* Forgot Password Link */}
                                         <div className="flex justify-end">
                                             <Link
                                                 href="/forgot-password"
-                                                className="text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1"
-                                                tabIndex={isLoading || isGoogleLoading ? -1 : 0}
+                                                className="text-sm text-primary hover:underline"
+                                                tabIndex={isLoading || isGoogleLoading || isLockedOut ? -1 : 0}
                                             >
                                                 Forgot Password?
                                             </Link>
                                         </div>
                                     </div>
-
-                                    {/* Submit Button */}
                                     <div className="space-y-6">
                                         <Button
                                             type="submit"
                                             className="w-full h-12"
-                                            disabled={isLoading || isGoogleLoading}
+                                            disabled={isLoading || isGoogleLoading || isLockedOut}
                                         >
-                                            {isLoading ? (
+                                            {isLockedOut ? (
+                                                `Locked (${Math.ceil((lockoutEnd! - Date.now()) / (1000 * 60))} min)`
+                                            ) : isLoading ? (
                                                 <div className="flex items-center justify-center">
                                                     <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
                                                     Signing in...
@@ -262,28 +304,20 @@ const UserSignIn = () => {
                                                 "Sign in"
                                             )}
                                         </Button>
-
-
-                                        {/* Divider */}
                                         <div className="relative">
                                             <div className="absolute inset-0 flex items-center">
                                                 <span className="w-full border-t" />
                                             </div>
                                             <div className="relative flex justify-center text-xs uppercase">
-                                                <span className="bg-background px-2 text-muted-foreground">
-                                                    Or continue with email
-                                                </span>
+                                                <span className="bg-background px-2 text-muted-foreground">Or continue with email</span>
                                             </div>
                                         </div>
-
-
-                                        {/* Google Sign In Button */}
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            className="w-full h-12 cursor-pointer  transition-colors duration-200"
+                                            className="w-full h-12"
                                             onClick={handleGoogleSignIn}
-                                            disabled={isGoogleLoading || isLoading}
+                                            disabled={isGoogleLoading || isLoading || isLockedOut}
                                         >
                                             {isGoogleLoading ? (
                                                 <div className="flex items-center justify-center">
@@ -302,17 +336,14 @@ const UserSignIn = () => {
                                                 </div>
                                             )}
                                         </Button>
-
-
-                                        {/* Separator and Sign Up Link */}
                                         <div className="space-y-4">
                                             <Separator />
                                             <div className="text-center text-sm text-muted-foreground">
                                                 Don't have an account?{" "}
                                                 <Link
                                                     href="signup"
-                                                    className="font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1"
-                                                    tabIndex={isLoading || isGoogleLoading ? -1 : 0}
+                                                    className="font-medium text-primary hover:underline"
+                                                    tabIndex={isLoading || isGoogleLoading || isLockedOut ? -1 : 0}
                                                 >
                                                     Create an account
                                                 </Link>
@@ -325,10 +356,8 @@ const UserSignIn = () => {
                     </Card>
                 </div>
             </div>
-
             {/* Right Side - Image */}
             <div className="hidden lg:block relative bg-muted w-full h-full">
-
                 <div className="relative w-full h-full">
                     <Image
                         src={"https://rlfkmbjptciiluhsbvxx.supabase.co/storage/v1/object/public/images//chris-winchester-nttQtY1-Osg-unsplash.jpg"}
@@ -340,13 +369,11 @@ const UserSignIn = () => {
                         quality={90}
                         loading="eager"
                         onLoadingComplete={(img) => {
-                            img.classList.remove('opacity-0');
-                            img.classList.add('opacity-100');
+                            img.classList.remove("opacity-0");
+                            img.classList.add("opacity-100");
                         }}
                     />
-
                 </div>
-
             </div>
         </div>
     );

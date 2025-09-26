@@ -217,7 +217,7 @@ const SuccessPaymentPage = () => {
                         </div>
                         <div className="flex flex-col gap-3">
                             <Button asChild className="w-full">
-                                <Link href="/dashboard/rentals">
+                                <Link href="/my-rentals">
                                     View My Rentals
                                     <ArrowRight className="ml-2 h-4 w-4" />
                                 </Link>
