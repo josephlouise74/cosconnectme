@@ -225,40 +225,26 @@ const UserForgotPassword = () => {
             </div>
 
             {/* Right Side - Image */}
-            <div className="hidden lg:block relative" style={{ backgroundColor: COLORS.light.bgSecondary }}>
-                <div className="absolute inset-0" style={{
-                    background: `linear-gradient(to bottom right, ${COLORS.light.bgSecondary}99, ${COLORS.light.bgSecondary}95)`
-                }} />
-                <div className="relative h-full flex items-center justify-center p-12">
-                    <div className="max-w-lg text-center space-y-6">
-                        <div className="relative w-64 h-64 mx-auto mb-8">
-                            <KeyRound className="w-full h-full text-rose-400 opacity-20" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Image
-                                    src={"https://rlfkmbjptciiluhsbvxx.supabase.co/storage/v1/object/public/images//chris-winchester-nttQtY1-Osg-unsplash.jpg"}
-                                    alt="Forgot Password Illustration"
-                                    width={400}
-                                    height={400}
-                                    className="w-full h-auto"
-                                    priority
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <h3 className={cn(
-                                TYPOGRAPHY.sizes.h4,
-                                TYPOGRAPHY.weights.bold
-                            )} style={{ color: COLORS.primary }}>
-                                Reset Your Password
-                            </h3>
-                            <p className={cn(
-                                TYPOGRAPHY.sizes.base
-                            )} style={{ color: COLORS.light.textSecondary }}>
-                                Don't worry! We'll help you get back into your account. Just enter your email address and we'll send you a reset link.
-                            </p>
-                        </div>
-                    </div>
+            <div className="hidden lg:block relative bg-muted w-full h-full">
+
+                <div className="relative w-full h-full">
+                    <Image
+                        src={"https://rlfkmbjptciiluhsbvxx.supabase.co/storage/v1/object/public/images//chris-winchester-nttQtY1-Osg-unsplash.jpg"}
+                        alt="Sign In Illustration"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover transition-opacity duration-300"
+                        priority
+                        quality={90}
+                        loading="eager"
+                        onLoadingComplete={(img) => {
+                            img.classList.remove('opacity-0');
+                            img.classList.add('opacity-100');
+                        }}
+                    />
+
                 </div>
+
             </div>
         </div>
     );

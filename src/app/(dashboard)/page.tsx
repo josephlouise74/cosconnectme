@@ -1,5 +1,6 @@
 "use client"
 
+import WelcomePage from "@/components/auth/WelcomePage"
 import SocialFeedSection from "@/components/SocialFeed/SocialFeedSection"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
@@ -10,21 +11,12 @@ const Page = () => {
   const {
     isAuthenticated,
     isLoading,
-
     user,
     userDataError,
     currentRole
   } = useSupabaseAuth()
 
   const router = useRouter()
-
-  // Redirect unauthenticated users to login
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/signin')
-      return
-    }
-  }, [isAuthenticated, isLoading, router])
 
   // Handle user data errors
   useEffect(() => {
@@ -34,13 +26,34 @@ const Page = () => {
     }
   }, [userDataError, isAuthenticated])
 
-  // Show loading spinner while checking authentication or loading user data
-  if (isLoading || !isAuthenticated || (isAuthenticated && !currentRole && !userDataError)) {
+  // Show loading spinner only while initially checking authentication status
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
           <p className="text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If user is not authenticated, show the welcome page as landing page
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <WelcomePage />
+      </div>
+    )
+  }
+
+  // Show loading for authenticated users while user data is being fetched
+  if (isAuthenticated && !currentRole && !userDataError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+          <p className="text-sm text-gray-600">Loading your profile...</p>
         </div>
       </div>
     )
@@ -69,7 +82,7 @@ const Page = () => {
     )
   }
 
-  // Role-based routing
+  // Role-based routing for authenticated users
   switch (currentRole) {
     case "lender":
       return (
@@ -97,32 +110,10 @@ const Page = () => {
       )
 
     default:
-      // Handle invalid or missing roles - redirect to role setup or contact support
+      // Handle invalid or missing roles - show welcome page for role setup
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
-          <div className="text-center p-8 bg-white rounded-lg shadow-sm border max-w-md">
-            <div className="w-12 h-12 mx-auto mb-4 text-amber-500">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Account Setup Required</h2>
-            <p className="text-sm text-gray-600 mb-6">Your account needs to be configured. Please contact support or complete your profile setup.</p>
-            <div className="space-y-2">
-              <button
-                onClick={() => router.push('/profile/setup')}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Complete Setup
-              </button>
-              <button
-                onClick={() => router.push('/contact')}
-                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Contact Support
-              </button>
-            </div>
-          </div>
+          <WelcomePage />
         </div>
       )
   }

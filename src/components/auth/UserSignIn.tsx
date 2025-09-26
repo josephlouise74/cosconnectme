@@ -18,8 +18,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 const SigninSchema = z.object({
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    email: z.string().email("Invalid email address").max(60, "Invalid email address"),
+    password: z.string().min(6, "Invalid password").max(60, "Invalid password"),
 });
 
 type SigninFormData = z.infer<typeof SigninSchema>;
