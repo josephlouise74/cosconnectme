@@ -14,6 +14,7 @@ import { signUp } from "actions/auth";
 import { Loader2, Lock, Mail, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -53,6 +54,7 @@ const UserSignUp = () => {
         email?: string;
     }>({});
 
+    const router = useRouter()
     const form = useForm<UserSignUpData>({
         resolver: zodResolver(signUpSchema),
         defaultValues: {
@@ -78,12 +80,11 @@ const UserSignUp = () => {
                 username: values.username.toLowerCase(),
                 role: "borrower" as const
             };
-
             const result = await signUp(formData);
-
             if (result.status === "success") {
                 toast.success("Account created successfully!");
                 form.reset();
+                router.push("/signin");
             } else {
                 // Handle specific error messages
                 if (result.status === "Username already taken") {

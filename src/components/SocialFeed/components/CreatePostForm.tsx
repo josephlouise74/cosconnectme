@@ -82,7 +82,7 @@ const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
   const removeImage = (indexToRemove: number) => {
     setUploadedImageUrls(prev => prev.filter((_, index) => index !== indexToRemove))
   }
-
+  console.log("userRolesData", userRolesData)
   const onSubmit = async (values: PostFormValues) => {
     console.log('Form submission started with values:', {
       content: values.content,
@@ -98,6 +98,7 @@ const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
     }
 
     try {
+
       const prepareData = {
         content: values.content,
         isForSale: values.isForSale,
@@ -105,7 +106,7 @@ const CreatePostForm = ({ onPostCreated }: { onPostCreated?: () => void }) => {
         author: {
           id: userRolesData?.user_id,
           name: userRolesData?.personal_info?.full_name || userRolesData?.username,
-          avatar: userRolesData?.personal_info?.profile_image,
+          avatar: userRolesData?.personal_info?.profile_image || "https://rlfkmbjptciiluhsbvxx.supabase.co/storage/v1/object/public/images/6596121.png",
           role: userRolesData?.roles?.[0]
         }
       }
