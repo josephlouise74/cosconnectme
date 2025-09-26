@@ -213,9 +213,14 @@ const Header = () => {
                     )}
 
                     <SwitchRoleButton
-                        afterSwitch={window.location.reload}
+                        afterSwitch={() => {
+                            if (typeof window !== "undefined") {
+                                window.location.reload();
+                            }
+                        }}
                         iconOnly
                     />
+
 
                     {/* Mobile Menu */}
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -264,8 +269,14 @@ const Header = () => {
 
                                 <div className='flex items-center justify-center'>
                                     <SwitchRoleButton
-                                    afterSwitch={window.location.reload}
-                                    iconOnly />
+                                        afterSwitch={() => {
+                                            if (typeof window !== "undefined") {
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        iconOnly
+                                    />
+
                                 </div>
 
                                 {/* User Section */}
