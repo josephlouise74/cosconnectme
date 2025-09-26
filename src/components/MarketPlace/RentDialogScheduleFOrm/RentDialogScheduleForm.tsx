@@ -414,7 +414,7 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
     // Step content renderer
     const renderStepContent = useCallback((): React.ReactNode => {
         const stepComponents = {
-            schedule: <ScheduleForm costumeInfo={costumeInfo} />,
+            schedule: <ScheduleForm costumeInfo={costumeInfo} costumeId={costumeId} />,
             personal: <PersonalDetailsForm />,
             payment: <PaymentMethodForm />,
             summary: <RentSummary costumeInfo={costumeInfo} />

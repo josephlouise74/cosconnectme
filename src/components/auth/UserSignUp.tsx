@@ -86,8 +86,10 @@ const UserSignUp = () => {
                 form.reset();
                 router.push("/signin");
             } else {
+                console.log(result);
                 // Handle specific error messages
-                if (result.status === "Username already taken") {
+                if (result.status === "error") {
+                    console.log(result.status, "Username already taken");
                     setFieldErrors(prev => ({ ...prev, username: "This username is already taken" }));
                     form.setError("username", {
                         type: "manual",

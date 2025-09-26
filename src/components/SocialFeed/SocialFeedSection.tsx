@@ -95,12 +95,12 @@ const SocialFeedSection = () => {
     refetch();
   }, [refetch]);
 
-   const posts = fetchedPosts ?? [];
+  const posts = fetchedPosts ?? [];
 
   // Loading state for initial load or page changes
   if (isAuthLoading || (isLoading && currentPage === 1)) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 h-full w-full">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
       </div>
     );

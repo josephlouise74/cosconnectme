@@ -176,15 +176,15 @@ export const useUpdateRentalRequestStatus = () => {
                 queryClient.invalidateQueries({ queryKey: ['renter-rentals', data.data.renter_uid] });
             } */
 
-                onSuccess: (data, variables) => {
-                    const message = data?.message || 'Rental status updated successfully';
-                    toast.success(message);
-        
-                    // Invalidate related queries to refresh UI
-                    queryClient.invalidateQueries({ queryKey: ['rental', variables.rental_id] });
-                    queryClient.invalidateQueries({ queryKey: ['rentalData', variables.rental_id] });
-                    queryClient.invalidateQueries({ queryKey: ['rentals'] });
-                    queryClient.invalidateQueries({ queryKey: ['lender-rentals', variables.lender_id] });
+        onSuccess: (data, variables) => {
+            const message = data?.message || 'Rental status updated successfully';
+            toast.success(message);
+
+            // Invalidate related queries to refresh UI
+            queryClient.invalidateQueries({ queryKey: ['rental', variables.rental_id] });
+            queryClient.invalidateQueries({ queryKey: ['rentalData', variables.rental_id] });
+            queryClient.invalidateQueries({ queryKey: ['rentals'] });
+            queryClient.invalidateQueries({ queryKey: ['lender-rentals', variables.lender_id] });
         },
         onError: (error) => {
             const errorData = error.response?.data;
@@ -690,5 +690,52 @@ export const useGetRentalDataById = (rental_id: string) => {
         lender: rentalData?.lender,
         payments: rentalData?.payments,
         paymentSummary: rentalData?.payment_summary,
+    };
+};
+
+
+
+
+
+// 📦 Types for Booked Dates API
+
+export type BookedDateRange = {
+    start_date: string;        // e.g. "2025-09-26"
+    end_date: string;          // e.g. "2025-09-27"
+    status: "pending" | "confirmed" | "accepted" | "delivered" | "returned" | "completed" | "cancelled" | "rejected" | "overdue";
+    reference_code: string;    // e.g. "RENTPAY-2025-068261"
+};
+
+export type BookedDatesResponse = {
+    success: boolean;
+    message: string;
+    data: {
+        costume_id: string;             // e.g. "78f9874a-0e10-4558-a12c-d1d11608b1cc"
+        booked_date_ranges: BookedDateRange[];
+        total_bookings: number;
+    };
+};
+
+
+export const useGetBookedDateRanges = (costumeId: string) => {
+    const query = useQuery<BookedDatesResponse>({
+        queryKey: ["booked-date-ranges", costumeId],
+        queryFn: async () => {
+            const response = await axiosApiClient.get<BookedDatesResponse>(
+                `/rental/costume-booked-dates/${costumeId}`
+            );
+            return response.data;
+        },
+        staleTime: 1000 * 60 * 5, // cache for 5 minutes
+        refetchOnWindowFocus: false,
+    });
+
+    return {
+        isFetching: query.isPending,
+        isError: query.isError,
+        // 👇 safely access booked_date_ranges
+        bookedDateRanges: query.data?.data.booked_date_ranges ?? [],
+        totalBookings: query.data?.data.total_bookings ?? 0,
+        costumeId: query.data?.data.costume_id ?? null,
     };
 };
