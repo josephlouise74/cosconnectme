@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn, signInWithGoogle } from "actions/auth";
-import { Loader2, Lock, Mail } from "lucide-react";
+import { Loader2, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,6 +27,7 @@ type SigninFormData = z.infer<typeof SigninSchema>;
 const UserSignIn = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<{
         email?: string;
         password?: string;
@@ -199,7 +200,7 @@ const UserSignIn = () => {
                                                         <div className="relative">
                                                             <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                                                             <Input
-                                                                type="password"
+                                                                type={showPassword ? "text" : "password"}
                                                                 placeholder="Enter your password"
                                                                 className={cn(
                                                                     "pl-10 h-12",
@@ -218,6 +219,14 @@ const UserSignIn = () => {
                                                                     }
                                                                 }}
                                                             />
+                                                            <button
+                                                                type="button"
+                                                                tabIndex={-1}
+                                                                onClick={() => setShowPassword((v) => !v)}
+                                                                className="absolute right-3 top-3 text-muted-foreground hover:text-primary focus:outline-none"
+                                                                >
+                                                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                                            </button>
                                                         </div>
                                                     </FormControl>
                                                     <FormMessage />

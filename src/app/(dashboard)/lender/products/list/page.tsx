@@ -17,7 +17,7 @@ const LoadingFallback = () => (
 
 const ProductListPage = () => {
   return (
-    <div className='m-8'>
+    <div className='pl-20 m-8'>
       <Suspense fallback={<LoadingFallback />}>
         <CostumeListSection />
       </Suspense>

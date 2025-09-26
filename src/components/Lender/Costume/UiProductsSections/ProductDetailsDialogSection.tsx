@@ -11,7 +11,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatOfferType } from '@/lib/utils';
-import { CostumeAddOnType, CostumeItemTypeV2 } from "@/types/costumes/costumeTypeV2";
+import { CostumeAddOnType, CostumeItemTypeV2 } from "@/lib/types/marketplace/get-costume";
 import {
     Calendar,
     Clock,

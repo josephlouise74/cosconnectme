@@ -266,7 +266,7 @@ const PostCard = memo(({ post, onSelect, refetch }: PostCardProps) => {
     if (imageCount === 1) {
       return (
         <div
-          className="cursor-pointer h-[400px] w-full"
+          className="cursor-pointer w-full aspect-[4/3] rounded-lg overflow-hidden"
           onClick={() => handleOpenImageDialog(0)}
         >
           <OptimizedPostImage src={post.images![0] as string} alt="Post image" index={0} />
@@ -276,11 +276,13 @@ const PostCard = memo(({ post, onSelect, refetch }: PostCardProps) => {
 
     // Multiple images grid
     return (
-      <div className="grid grid-cols-2 gap-2 h-[400px]">
+      <div className="grid grid-cols-2 gap-2 w-full overflow-hidden">
         {post.images!.slice(0, 4).map((img, idx) => (
           <div
             key={idx}
-            className={`cursor-pointer relative ${idx === 0 ? 'row-span-2 col-span-2 h-[400px]' : 'h-[196px]'}`}
+            className={
+              `cursor-pointer relative rounded-lg overflow-hidden aspect-[4/3]`
+            }
             onClick={() => handleOpenImageDialog(idx)}
           >
             <OptimizedPostImage src={img} alt={`Post image ${idx + 1}`} index={idx} />

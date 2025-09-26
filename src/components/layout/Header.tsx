@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User, ArrowLeft } from 'lucide-react';
+import { HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User, ArrowLeft, Icon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -94,19 +94,23 @@ const Header = () => {
 
                     {/* Desktop Navigation */}
                     <nav className="hidden md:flex items-center space-x-6">
-                        {navLinks.map((link) => (
-                            <Link
-                                key={link.name}
-                                href={link.href}
-                                className={cn(
-                                    "text-sm font-medium",
-                                    "transition-colors duration-300",
-                                    "hover:text-rose-600 dark:hover:text-rose-400"
-                                )}
-                            >
-                                {link.name}
-                            </Link>
-                        ))}
+                        {navLinks.map((link) => {
+                            const isActive = pathname === link.href;
+                            return (
+                                <Link
+                                    key={link.name}
+                                    href={link.href}
+                                    className={cn(
+                                        "text-sm font-medium",
+                                        "transition-colors duration-300",
+                                        "hover:text-rose-600 dark:hover:text-rose-400",
+                                        isActive && "text-rose-600 dark:text-rose-400 font-bold"
+                                    )}
+                                >
+                                    {link.name}
+                                </Link>
+                            );
+                        })}
                     </nav>
                 </div>
                 {/* Action Buttons */}
@@ -191,11 +195,6 @@ const Header = () => {
                                     <LogOut className="mr-2 h-4 w-4" />
                                     <span>Logout</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                    <div className="w-full flex items-center gap-2 px-2 py-2 cursor-pointer hover:bg-muted transition-colors">
-                                        <SwitchRoleButton />
-                                    </div>
-                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
@@ -212,6 +211,11 @@ const Header = () => {
                             <span>Sign In</span>
                         </Button>
                     )}
+
+                    <SwitchRoleButton
+                        afterSwitch={window.location.reload}
+                        iconOnly
+                    />
 
                     {/* Mobile Menu */}
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -259,7 +263,9 @@ const Header = () => {
                                 </nav>
 
                                 <div className='flex items-center justify-center'>
-                                    <SwitchRoleButton />
+                                    <SwitchRoleButton
+                                    afterSwitch={window.location.reload}
+                                    iconOnly />
                                 </div>
 
                                 {/* User Section */}

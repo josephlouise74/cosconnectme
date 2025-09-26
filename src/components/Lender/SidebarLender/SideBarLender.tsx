@@ -191,7 +191,7 @@ const SidebarLender = memo(() => {
         {
             title: "Rentals",
             icon: ShoppingCart,
-            badge: 5, // Replace with actual data
+            /* badge: 5, // Replace with actual data */
             children: [
                 /* {
                     title: "Messages",
@@ -374,16 +374,16 @@ const SidebarLender = memo(() => {
                             </p>
                         </div>
                     )}
-                    
+
                 </div>
-                <div className={cn( "mt-3", isCollapsed ? "flex justify-center" : "w-full"
+                <div className={cn("mt-3", isCollapsed ? "flex justify-center" : "w-full"
                 )}>
-                    <SwitchRoleButton iconOnly={isCollapsed}/>
+                    <SwitchRoleButton iconOnly={isCollapsed} />
                 </div>
 
             </div>
-            
-            
+
+
             {/* Theme Toggle */}
             <div className={cn("p-4 mx-4", isCollapsed && "mx-2")}>
                 {mounted && (
@@ -470,7 +470,7 @@ const SidebarLender = memo(() => {
     return (
         <div
             className={cn(
-                "flex-shrink-0 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out relative ",
+                "fixed top-0 left-0 h-screen z-40 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out bg-white dark:bg-gray-900",
                 isCollapsed ? `w-${SIDEBAR_COLLAPSED_WIDTH}` : `w-${SIDEBAR_EXPANDED_WIDTH}`
             )}
             onMouseEnter={handleSidebarMouseEnter}

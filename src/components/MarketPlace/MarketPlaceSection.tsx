@@ -323,7 +323,7 @@ const MarketPlaceSection = () => {
   // Loading state
   if (authLoading || isLoadingCostumes || isLoadingCategories) {
     return (
-      <div className="container mx-auto py-20 flex justify-center items-center">
+      <div className="min-h-screen flex justify-center items-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading marketplace...</p>
