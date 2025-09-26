@@ -1,6 +1,13 @@
 "use client"
 import { Button } from "@/components/ui/button";
 import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import {
     Card,
     CardContent,
 } from "@/components/ui/card";
@@ -18,7 +25,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-
+import TermsAndConditions from "../layout/UiSections/TermsAndConditions";
+import PrivacyPolicy from "../layout/UiSections/PrivacyPolicy";
 const usernameRegex = /^[a-z0-9_]{3,20}$/; // Only allow lowercase alphanumeric and underscore, 3-20 chars
 
 const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
@@ -389,38 +397,45 @@ const UserSignUp = () => {
                                                             )}
                                                         >
                                                             I agree to the{" "}
-                                                            <Link
-                                                                href="/terms"
-                                                                className={cn(
-                                                                    "text-rose-500 hover:underline",
-                                                                    "focus:outline-none focus:ring-2 focus:ring-rose-500/20 rounded-sm px-1"
-                                                                )}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                            >
-                                                                Terms of Service
-                                                            </Link>{" "}
+                                                            <Dialog>
+                                                                <DialogTrigger asChild>
+                                                                    <Button
+                                                                        variant="link"
+                                                                        className="p-0 text-rose-500 hover:underline"
+                                                                    >
+                                                                        Terms of Service
+                                                                    </Button>
+                                                                </DialogTrigger>
+                                                                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                                                                        <TermsAndConditions />
+                                                                </DialogContent>
+                                                            </Dialog>
                                                             and{" "}
-                                                            <Link
-                                                                href="/privacy"
-                                                                className={cn(
-                                                                    "text-rose-500 hover:underline",
-                                                                    "focus:outline-none focus:ring-2 focus:ring-rose-500/20 rounded-sm px-1"
-                                                                )}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                            >
-                                                                Privacy Policy
-                                                            </Link>
+                                                            <Dialog>
+                                                                <DialogTrigger asChild>
+                                                                    <Button
+                                                                        variant="link"
+                                                                        className="p-0 text-rose-500 hover:underline"
+                                                                    >
+                                                                        Privacy Policy
+                                                                    </Button>
+                                                                </DialogTrigger>
+                                                                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                                                                        <PrivacyPolicy />
+                                                                </DialogContent>    
+                                                            </Dialog>
                                                         </FormLabel>
-                                                        <FormMessage className={cn(
-                                                            TYPOGRAPHY.sizes.xs,
-                                                            "text-rose-500"
-                                                        )} />
+                                                        <FormMessage
+                                                            className={cn(
+                                                                TYPOGRAPHY.sizes.xs,
+                                                                "text-rose-500"
+                                                            )}
+                                                        />
                                                     </div>
                                                 </FormItem>
                                             )}
                                         />
+
                                     </div>
 
                                     {/* Submit Button */}

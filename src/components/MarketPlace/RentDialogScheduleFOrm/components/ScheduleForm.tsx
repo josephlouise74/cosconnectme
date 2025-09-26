@@ -115,7 +115,8 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
-        if (date < today) return
+        if (date <= today) return
+
         if (costumeInfo.unavailableDates?.some((unavailable: Date) => {
             const unavailableDate = new Date(unavailable)
             unavailableDate.setHours(0, 0, 0, 0)
@@ -165,6 +166,7 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
+        const isToday = date.toDateString() === today.toDateString()
         const isPast = date < today
         const isUnavailable = costumeInfo.unavailableDates?.some((unavailable: Date) => {
             const unavailableDate = new Date(unavailable)
@@ -185,6 +187,9 @@ const ScheduleForm = ({ costumeInfo }: ScheduleFormProps) => {
         if (isPast || isUnavailable) {
             return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`
         }
+        if (isToday) {
+            return `${baseClasses} bg-rose-50 text-rose-400 border border-rose-100 cursor-not-allowed`
+        }        
         if (isSelected) {
             return `${baseClasses} bg-rose-500 text-white hover:bg-rose-600`
         }

@@ -129,9 +129,15 @@ export const PaymentMethodForm: React.FC = () => {
                                 </FormLabel>
                                 <Input
                                     placeholder="Juan Dela Cruz"
-                                    {...field}
+                                    value={field.value}
+                                    onChange={(e) => {
+                                        const onlyLetters = e.target.value.replace(/[^a-zA-Z .]/g, "");
+                                        field.onChange(onlyLetters + "");
+                                    }}
+                                    maxLength={30}
                                     required
                                 />
+
                                 <FormMessage />
                                 <p className="text-sm text-gray-500 mt-1">
                                     Enter the full name registered on your GCash account

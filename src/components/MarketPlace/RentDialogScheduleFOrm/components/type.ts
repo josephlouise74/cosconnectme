@@ -34,7 +34,7 @@ export const paymentMethodSchema = z.object({
     refund_gcash_number: z.string().min(1, "Refund GCash number is required")
         .regex(/^\+63\d{10}$/, "Please enter a valid Philippine GCash number"),
     refund_account_name: z.string().min(1, "Refund account name is required")
-        .min(2, "Name must be at least 2 characters")
+        .min(2, "Name must be at least 2 characters").max(50, "Name must be at most 50 characters").regex(/^[a-zA-Z\s]+$/, "Name must contain only letters and spaces")
 })
 
 export const agreementsSchema = z.object({

@@ -424,7 +424,7 @@ export const RentalBookingDialog: React.FC<RentalBookingDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-            <DialogContent className="max-w-4xl max-h-[98vh] overflow-hidden flex flex-col">
+            <DialogContent className="max-w-2xl max-h-[98vh] overflow-hidden flex flex-col">
                 <DialogHeader className="flex-shrink-0">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-2xl font-semibold flex items-center gap-2">

@@ -204,6 +204,12 @@ const SidebarLender = memo(() => {
             ]
         },
 
+        {title: "Terms & Conditions", 
+        icon: Edit, 
+        href: "/lender/terms-conditions"
+
+        },
+
         {
             title: "Settings",
             icon: Settings,
