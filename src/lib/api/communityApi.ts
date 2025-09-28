@@ -114,7 +114,9 @@ export const useCreatePost = () => {
 // src/hooks/useGetAllPosts.ts
 interface GetAllPostsParams {
     limit?: number;
-    page?: number; // backend expects page, not cursor
+    page?: number;
+    search?: string;
+    onlyForSale?: boolean;
 }
 
 // Get All Posts Hook
@@ -129,14 +131,20 @@ export const useGetAllPosts = (params?: GetAllPostsParams) => {
             if (params?.page) {
                 queryParams.append('page', params.page.toString());
             }
+            if (params?.search && params.search.trim().length > 0) {
+                queryParams.append('search', params.search.trim());
+            }
+            if (params?.onlyForSale === true) {
+                queryParams.append('onlyForSale', 'true');
+            }
 
             const url = `/community/get-all-posts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
 
             const response = await axiosApiClient.get<AllPostsResponse>(url);
 
             return response.data;
-        } catch (error) {
-            const message = "Failed to fetch posts";
+        } catch (error: any) {
+            const message = error?.response?.data?.message || "Failed to fetch posts";
             toast.error(message);
             throw error;
         }
@@ -147,6 +155,8 @@ export const useGetAllPosts = (params?: GetAllPostsParams) => {
         queryFn: getAllPostsApiRequest,
         staleTime: 1000 * 60, // 1 minute
         refetchOnWindowFocus: false,
+        retry: 2,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
 
     return {
@@ -154,11 +164,12 @@ export const useGetAllPosts = (params?: GetAllPostsParams) => {
         allPosts: query.data?.data ?? [],
         error: query.error,
         pagination: query.data?.pagination,
+
         refetch: query.refetch,
         isRefetching: query.isRefetching,
+        isFetching: query.isFetching,
     };
 };
-
 
 // ✅ Comment on Post
 export const useCommentOnPost = () => {

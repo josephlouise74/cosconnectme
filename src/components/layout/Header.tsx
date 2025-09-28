@@ -62,7 +62,7 @@ const Header = () => {
 
     const navLinks = [
         { name: 'Community', href: '/' },
-        { name: 'Market Place', href: '/marketplace' },
+        { name: 'Rental Services', href: '/rental-services' },
     ];
 
     const supportLinks = [

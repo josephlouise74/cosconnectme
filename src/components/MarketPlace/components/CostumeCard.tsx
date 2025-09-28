@@ -106,7 +106,7 @@ const CostumeCard: React.FC<CostumeCardProps> = ({ costume, onAddToWishlist }) =
     if (costume.listing_type === "rent" && rent) {
       return (
         <Button
-          className="w-full font-semibold border-2 border-blue-500 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+          className="w-full font-semibold border-2 border-blue-500 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
           size="sm"
           onClick={(e) => {
             e.stopPropagation()

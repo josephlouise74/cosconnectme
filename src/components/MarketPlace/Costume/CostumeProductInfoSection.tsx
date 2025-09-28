@@ -30,6 +30,7 @@ import Image from "next/image"
 import { useParams } from "next/navigation"
 import type React from "react"
 import { useMemo, useState } from "react"
+import Link from "next/link"
 
 interface CostumeDetailViewerProps {
     costumeId?: any
@@ -467,6 +468,7 @@ const CostumeInformation: React.FC<{ costume: CostumeByName }> = ({ costume }) =
 }
 
 const LenderInformation: React.FC<{ costume: CostumeByName }> = ({ costume }) => {
+    console.log("costume", costume)
     return (
         <Card className="mt-8">
             <CardHeader>
@@ -493,14 +495,18 @@ const LenderInformation: React.FC<{ costume: CostumeByName }> = ({ costume }) =>
                     </div>
 
                     <div className="space-y-2 flex-1">
-                        <h3 className="text-xl font-semibold">{costume.business_name}</h3>
+                        <Link href={`/profile/${costume.user_name}`} className="hover:underline">
+                            <h3 className="text-xl font-semibold">{costume.business_name}</h3>
+                        </Link>
                         <div className="flex items-center gap-2">
                             <Badge variant="outline" className="capitalize border-rose-200 text-rose-700">
                                 {costume.business_type?.toLowerCase()}
                             </Badge>
-                            <Badge variant="outline" className="text-gray-600">
-                                @{costume.user_name}
-                            </Badge>
+                            <Link href={`/profile/${costume.user_name}`} className="hover:underline">
+                                <Badge variant="outline" className="text-gray-600">
+                                    @{costume.user_name}
+                                </Badge>
+                            </Link>
                         </div>
                         {costume.business_description && (
                             <p className="text-gray-600 text-sm">{costume.business_description}</p>

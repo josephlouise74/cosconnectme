@@ -2,12 +2,11 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { COSTUME_TYPE } from '@/lib/types/create-costume-type';
 import { cn } from '@/lib/utils';
-import { ArrowRight, Heart, MapPin, Tag } from 'lucide-react'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import React from 'react'
+import { ArrowRight, Heart, MapPin, Tag } from 'lucide-react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import React from 'react';
 
 interface FeaturedCustomeSectionProps {
     costumes: any[];
@@ -204,14 +203,6 @@ const FeaturedCustomeSection = ({ costumes, isLoading, error }: FeaturedCustomeS
                                             </p>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="outline" className="text-xs">
-                                            {COSTUME_TYPE.find(type => type.value === product.mainOffer.type)?.label || product.mainOffer.type}
-                                        </Badge>
-                                        <span className="text-sm text-text-muted dark:text-text-muted-dark">
-                                            {product.mainOffer.name}
-                                        </span>
-                                    </div>
                                 </div>
 
                                 <p className="text-sm text-text-muted dark:text-text-muted-dark line-clamp-2">
@@ -228,7 +219,7 @@ const FeaturedCustomeSection = ({ costumes, isLoading, error }: FeaturedCustomeS
 
                                 {costume.tags.length > 0 && (
                                     <div className="flex flex-wrap gap-1">
-                                        {costume.tags.slice(0, 3).map((tag, index) => (
+                                        {costume.tags.slice(0, 3).map((tag: any, index: any) => (
                                             <Badge key={index} variant="secondary" className="flex items-center gap-1">
                                                 <Tag className="h-3 w-3" />
                                                 {tag}

@@ -275,9 +275,9 @@ const BusinessInfoGrid: React.FC<BusinessInfoGridProps> = ({ userData }) => {
                         </div>
                         <Badge
                             variant={
-                                hasDocument(businessInfo.upload_business_permit) &&
-                                    hasDocument(businessInfo.upload_dti_certificate) &&
-                                    hasDocument(businessInfo.upload_storefront_photo)
+                                hasDocument(businessInfo.business_permit) &&
+                                    hasDocument(businessInfo.dti_certificate) &&
+                                    hasDocument(businessInfo.storefront_photo)
                                     ? "default"
                                     : "secondary"
                             }

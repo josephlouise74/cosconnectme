@@ -2,7 +2,8 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/styles/theme';
+import { cn } from '@/lib/utils';
+
 import { Facebook, Instagram, Mail, Twitter, Youtube } from 'lucide-react';
 import Link from 'next/link';
 
