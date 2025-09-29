@@ -1,18 +1,17 @@
 "use client"
+import SwitchRoleButton from "@/components/layout/UiSections/ButtonSwitch/SwitchRoleButton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useGetBorrowerProfile } from "@/lib/api/borrowerApi";
 import { cn } from '@/lib/utils';
-import { HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User, ArrowLeft, Icon } from 'lucide-react';
+import { ArrowLeft, Bell, HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getUserSession, signOut } from '../../../actions/auth';
-import SwitchRoleButton from "@/components/layout/UiSections/ButtonSwitch/SwitchRoleButton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { usePathname } from "next/navigation";
-import { useGetBorrowerProfile } from "@/lib/api/borrowerApi";
 
 const Header = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -21,6 +20,8 @@ const Header = () => {
     const [user, setUser] = useState<any>(null);
     const router = useRouter();
     const pathname = usePathname();
+    const [notificationCount, setNotificationCount] = useState(3); // Example: 3 unread notifications
+    const [hasNewNotifications, setHasNewNotifications] = useState(true); // Example: has new notifications
 
     useEffect(() => {
         setMounted(true);
@@ -115,26 +116,32 @@ const Header = () => {
                 </div>
                 {/* Action Buttons */}
                 <div className="flex items-center space-x-4">
-                    {/* Theme Toggle Button */}
-                    {mounted && (
+                    {/* Notification Bell */}
+                    <div className="relative">
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                             className={cn(
                                 "hidden md:flex cursor-pointer",
                                 "hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-950",
-                                "transition-colors duration-300"
+                                "transition-colors duration-300",
+                                hasNewNotifications && "animate-pulse"
                             )}
+                            onClick={() => {
+                                // TODO: Handle notification click
+                                setHasNewNotifications(false);
+                                setNotificationCount(0);
+                                router.push('/notifications');
+                            }}
                         >
-                            {theme === 'dark' ? (
-                                <Sun className="h-5 w-5 cursor-pointer" />
-                            ) : (
-                                <Moon className="h-5 w-5 cursor-pointer" />
-                            )}
+                            <Bell className="h-5 w-5" />
                         </Button>
-                    )}
-
+                        {notificationCount > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-xs font-medium text-white">
+                                {notificationCount > 9 ? '9+' : notificationCount}
+                            </span>
+                        )}
+                    </div>
                     {/* User Profile Dropdown */}
                     {isAuthenticated ? (
                         <DropdownMenu>
