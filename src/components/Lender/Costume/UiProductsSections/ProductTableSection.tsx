@@ -1,5 +1,6 @@
 "use client";
 
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,19 +17,18 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Costume } from "@/lib/api/costumeApi";
 import {
-    ArrowUpDown,
     ChevronDown,
     ChevronUp,
     Eye,
     MoreHorizontal,
-    Pencil,
-    Trash2,
+    Trash2
 } from "lucide-react";
 import Image from "next/image";
 import { memo, useCallback, useMemo, useState } from "react";
-import { Costume } from "@/lib/api/costumeApi";
+import EmptyState from "./EmptyState";
+import SortButton from "./SortButton";
 
 interface CostumeTableProps {
     costumes: Costume[];
@@ -38,7 +38,6 @@ interface CostumeTableProps {
     };
     onSort: (key: keyof Costume | "rental_price" | "sale_price") => void;
     onViewCostume: (costume: Costume) => void;
-    onEditCostume: (costumeName: string) => void;
     onDeleteCostume: (costume: Costume) => void;
 }
 
@@ -91,13 +90,11 @@ const DesktopTableRow = memo(
         costume,
         index,
         onViewCostume,
-        onEditCostume,
         onDeleteCostume,
     }: {
         costume: Costume;
         index: number;
         onViewCostume: (costume: Costume) => void;
-        onEditCostume: (costumeName: string) => void;
         onDeleteCostume: (costume: Costume) => void;
     }) => {
         const mainImage = getMainImage(costume);
@@ -169,7 +166,6 @@ const DesktopTableRow = memo(
                         <ActionsDropdown
                             costume={costume}
                             onViewCostume={onViewCostume}
-                            onEditCostume={onEditCostume}
                             onDeleteCostume={onDeleteCostume}
                         />
                     </div>
@@ -185,11 +181,10 @@ DesktopTableRow.displayName = "DesktopTableRow";
 const MobileCard = memo(
     ({
         costume,
-        index,
+
         isExpanded,
         onToggleExpansion,
         onViewCostume,
-        onEditCostume,
         onDeleteCostume,
     }: {
         costume: Costume;
@@ -197,7 +192,6 @@ const MobileCard = memo(
         isExpanded: boolean;
         onToggleExpansion: () => void;
         onViewCostume: (costume: Costume) => void;
-        onEditCostume: (costumeName: string) => void;
         onDeleteCostume: (costume: Costume) => void;
     }) => {
         const mainImage = getMainImage(costume);
@@ -241,7 +235,6 @@ const MobileCard = memo(
                         <ActionsDropdown
                             costume={costume}
                             onViewCostume={onViewCostume}
-                            onEditCostume={onEditCostume}
                             onDeleteCostume={onDeleteCostume}
                         />
                         <Button
@@ -330,12 +323,10 @@ const ActionsDropdown = memo(
     ({
         costume,
         onViewCostume,
-        onEditCostume,
         onDeleteCostume,
     }: {
         costume: Costume;
         onViewCostume: (costume: Costume) => void;
-        onEditCostume: (costumeName: string) => void;
         onDeleteCostume: (costume: Costume) => void;
     }) => (
         <DropdownMenu>
@@ -349,10 +340,6 @@ const ActionsDropdown = memo(
                 <DropdownMenuItem onClick={() => onViewCostume(costume)}>
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEditCostume(costume.name)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
                     onClick={() => onDeleteCostume(costume)}
@@ -368,53 +355,9 @@ const ActionsDropdown = memo(
 
 ActionsDropdown.displayName = "ActionsDropdown";
 
-// Sort button
-const SortButton = memo(
-    ({
-        sortKey,
-        children,
-        sortConfig,
-        onSort,
-    }: {
-        sortKey: keyof Costume | "rental_price" | "sale_price";
-        children: React.ReactNode;
-        sortConfig: {
-            key: keyof Costume | "rental_price" | "sale_price" | null;
-            direction: "asc" | "desc" | null;
-        };
-        onSort: (key: keyof Costume | "rental_price" | "sale_price") => void;
-    }) => (
-        <button
-            onClick={() => onSort(sortKey)}
-            className="flex items-center hover:text-foreground transition-colors text-left"
-        >
-            {children}
-            {sortConfig.key === sortKey ? (
-                sortConfig.direction === "asc" ? (
-                    <ChevronUp className="ml-1 h-4 w-4 text-muted-foreground" />
-                ) : (
-                    <ChevronDown className="ml-1 h-4 w-4 text-muted-foreground" />
-                )
-            ) : (
-                <ArrowUpDown className="ml-1 h-4 w-4 text-muted-foreground" />
-            )}
-        </button>
-    )
-);
-
-SortButton.displayName = "SortButton";
-
-const EmptyState = () => (
-    <div className="text-center py-12">
-        <div className="text-muted-foreground mb-2">No costumes found</div>
-        <p className="text-sm text-muted-foreground/70">
-            Your costume listings will appear here
-        </p>
-    </div>
-);
 
 const CostumeTableSection = memo(
-    ({ costumes, sortConfig, onSort, onViewCostume, onEditCostume, onDeleteCostume }: CostumeTableProps) => {
+    ({ costumes, sortConfig, onSort, onViewCostume, onDeleteCostume }: CostumeTableProps) => {
         const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
         const getRowKey = useCallback((costume: Costume, index: number) => `${costume.id}-${index}`, []);
@@ -485,7 +428,7 @@ const CostumeTableSection = memo(
                                         costume={costume}
                                         index={index}
                                         onViewCostume={onViewCostume}
-                                        onEditCostume={onEditCostume}
+
                                         onDeleteCostume={onDeleteCostume}
                                     />
                                 ))
@@ -509,7 +452,7 @@ const CostumeTableSection = memo(
                                     isExpanded={expandedRows.has(rowKey)}
                                     onToggleExpansion={() => toggleRowExpansion(rowKey)}
                                     onViewCostume={onViewCostume}
-                                    onEditCostume={onEditCostume}
+
                                     onDeleteCostume={onDeleteCostume}
                                 />
                             );

@@ -11,32 +11,36 @@ import SidebarLender from "@/components/Lender/SidebarLender/SideBarLender"
 import { SocketProvider } from "@/lib/contexts/SocketProvider"
 
 export default function DashboardLayout({
-  children,
+    children,
 }: {
-  children: React.ReactNode
+    children: React.ReactNode
 }) {
-  const { currentRole, isLoading, isAuthenticated } = useSupabaseAuth()
-  const pathname = usePathname()
+    const { currentRole, isAuthenticated } = useSupabaseAuth()
+    const pathname = usePathname()
 
 
 
-  return (
-    <SocketProvider>
-      <div className="flex min-h-screen bg-muted/40">
-        <div className="flex flex-1 flex-col w-full mx-auto">
-          <div className={`flex-1 flex ${currentRole === "lender" ? "flex-row" : "flex-col"}`}>
-            {currentRole !== "lender" && <Header />}
-            {isAuthenticated && currentRole === "lender" && <SidebarLender />}
+    return (
+        <SocketProvider>
+            <div className="flex min-h-screen bg-muted/40">
+                <div className="flex flex-1 flex-col w-full mx-auto">
+                    <div className={`flex-1 flex ${currentRole === "lender" ? "flex-row" : "flex-col"}`}>
+                        {currentRole !== "lender" && <Header />}
+                        {isAuthenticated && currentRole === "lender" && <SidebarLender />}
 
-            <main className="flex-1 overflow-auto min-w-[320px]">{children}</main>
+                        <main className="flex-1 overflow-auto p-4 md:p-6">
+                            <div className="max-w-7xl mx-auto w-full">
+                                {children}
+                            </div>
+                        </main>
 
-            {currentRole !== "lender" &&
-              pathname !== "/costumes/chat" &&
-              pathname !== "/" &&
-              pathname !== "/messages" && <Footer />}
-          </div>
-        </div>
-      </div>
-    </SocketProvider>
-  )
+                        {currentRole !== "lender" &&
+                            pathname !== "/costumes/chat" &&
+                            pathname !== "/" &&
+                            pathname !== "/messages" && <Footer />}
+                    </div>
+                </div>
+            </div>
+        </SocketProvider>
+    )
 }

@@ -1,14 +1,12 @@
 "use client"
 
 import {
-    CreditCard,
     Edit,
     Grid,
     LayoutDashboard,
     ListOrdered,
     LogOut,
     Menu,
-    MessageCircle,
     Moon,
     Package,
     PlusCircle,
@@ -19,11 +17,12 @@ import {
     type LucideIcon
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 
+import SwitchRoleButton from "@/components/layout/UiSections/ButtonSwitch/SwitchRoleButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,7 +31,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth";
 import { cn } from "@/lib/utils";
 import { signOut } from "actions/auth";
-import SwitchRoleButton from "@/components/layout/UiSections/ButtonSwitch/SwitchRoleButton";
 
 // Types
 interface SidebarChildItem {
@@ -199,14 +197,15 @@ const SidebarLender = memo(() => {
                     href: "/messages",
                     badge: 3 // Replace with actual data
                 }, */
-                { title: "Rental List", icon: ListOrdered, href: "/lender/products/list" },
+                { title: "Rental List", icon: ListOrdered, href: "/lender/rental/list" },
                 /*   { title: "Payment History", icon: CreditCard, href: "" }, */
             ]
         },
 
-        {title: "Terms & Conditions", 
-        icon: Edit, 
-        href: "/lender/terms-conditions"
+        {
+            title: "Terms & Conditions",
+            icon: Edit,
+            href: "/lender/terms-conditions"
 
         },
 
