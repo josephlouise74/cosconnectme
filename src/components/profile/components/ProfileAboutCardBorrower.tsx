@@ -231,7 +231,7 @@ const BusinessInfo = ({ profileData }: { profileData: ProcessedProfileData }) =>
                         <MapPin className="h-3 w-3" />
                         Business Location
                     </h3>
-                    {addresses.map((address, index) => (
+                    {addresses.map((address) => (
                         <div key={address.id} className="text-sm text-gray-600 dark:text-gray-400">
                             <p>{address.full_address}</p>
                             {address.is_primary && (

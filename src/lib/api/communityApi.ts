@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { axiosApiClient } from "./axiosApiClient";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AllPostsResponse } from "../types/community/all-posts";
 import axios from "axios";
 
@@ -302,3 +302,74 @@ export const useGetCommentsOnPost = (
 };
 
 
+
+
+interface DeletePostResponse {
+    success: boolean;
+    message: string;
+    data?: { id: string };
+}
+
+interface UpdatePostResponse {
+    success: boolean;
+    message: string;
+    data?: any;
+}
+
+interface DeletePostParams {
+    postId: string;
+    author_id: string;
+}
+
+interface UpdatePostParams {
+    postId: string;
+    content?: string;
+    images?: string[];
+    is_for_sale?: boolean;
+}
+
+export const useDeleteCommunityPost = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<DeletePostResponse, unknown, DeletePostParams>({
+        mutationFn: async ({ postId, author_id }: DeletePostParams) => {
+            const response = await axiosApiClient.delete<DeletePostResponse>(
+                `/community/delete-post/${postId}`,
+                { data: { author_id } } // Send author_id in request body
+            );
+            return response.data;
+        },
+        onSuccess: (data) => {
+            toast.success(data.message || "Post deleted successfully");
+            queryClient.invalidateQueries({ queryKey: ["community-posts"] });
+        },
+        onError: (error: any) => {
+            const message =
+                error.response?.data?.message || "Failed to delete community post";
+            toast.error(message);
+        },
+    });
+};
+
+export const useUpdateMyPost = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<UpdatePostResponse, unknown, UpdatePostParams>({
+        mutationFn: async ({ postId, ...updateData }: UpdatePostParams) => {
+            const response = await axiosApiClient.put<UpdatePostResponse>(
+                `/community/update-my-post/${postId}`,
+                updateData
+            );
+            return response.data;
+        },
+        onSuccess: (data) => {
+            toast.success(data.message || "Post updated successfully");
+            queryClient.invalidateQueries({ queryKey: ["community-posts"] });
+        },
+        onError: (error: any) => {
+            const message =
+                error.response?.data?.message || "Failed to update community post";
+            toast.error(message);
+        },
+    });
+};
