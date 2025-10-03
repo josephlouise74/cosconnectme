@@ -2,7 +2,7 @@
 "use client"
 
 import { useParams, useSearchParams } from "next/navigation"
-import React, { useMemo } from "react"
+import React, { Suspense, useMemo } from "react"
 import ProfileHeader from "./components/ProfileHeader"
 import ProfileSkeletonBorrower from "./components/ProfileSkeletionBorrower"
 
@@ -10,6 +10,7 @@ import { useGetUserDataByIdWithRole } from "@/lib/api/userApi"
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
 import { BusinessResponse, UserResponse } from "@/lib/types/profile/get-profile-data"
 import ProfileAboutCard from "./components/ProfileAboutCardBorrower"
+import { Loader2 } from "lucide-react"
 
 const ProfileSection = () => {
     const { username } = useParams()
@@ -110,39 +111,41 @@ const ProfileSection = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
-            {/* Profile Header with Cover Photo and Avatar */}
-            <ProfileHeader
-                profileData={processedProfileData as any}
-                role={role}
-                userRolesData={userRolesData}
-            />
+        <Suspense fallback={<><Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" /></>}>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+                {/* Profile Header with Cover Photo and Avatar */}
+                <ProfileHeader
+                    profileData={processedProfileData as any}
+                    role={role}
+                    userRolesData={userRolesData}
+                />
 
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column - User Info */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <ProfileAboutCard
-                            profileData={processedProfileData}
-                            role={role}
-                            isOwnProfile={isOwnProfile}
-                        />
-                    </div>
+                {/* Main Content */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left Column - User Info */}
+                        <div className="lg:col-span-1 space-y-6">
+                            <ProfileAboutCard
+                                profileData={processedProfileData}
+                                role={role}
+                                isOwnProfile={isOwnProfile}
+                            />
+                        </div>
 
-                    {/* Right Column - Posts */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Create Post Card - Only show if it's the user's own profile */}
-                        {/*   {isOwnProfile && (
+                        {/* Right Column - Posts */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {/* Create Post Card - Only show if it's the user's own profile */}
+                            {/*   {isOwnProfile && (
                 <PostCreationCardBorrower profileData={processedProfileData} />
               )} */}
 
-                        {/* Posts List */}
-                        {/*  <PostsListBorrower profileData={processedProfileData} /> */}
+                            {/* Posts List */}
+                            {/*  <PostsListBorrower profileData={processedProfileData} /> */}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </Suspense>
     )
 }
 
