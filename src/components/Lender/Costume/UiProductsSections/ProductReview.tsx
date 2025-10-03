@@ -1,15 +1,12 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { CostumeFormValues } from '@/lib/zodFormSchema/productSchema';
 
-import { UploadCloud, ShoppingBag, Calendar, Shield } from 'lucide-react';
+import { Calendar, Shield, ShoppingBag, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
-import React, { lazy, memo, Suspense } from 'react';
-
-const ProductAddOnsFormSection = lazy(() => import('./ProductAddOnsFormSection'));
+import React, { memo } from 'react';
 
 interface ProductPreviewProps {
-    formData: CostumeFormValues;
+    formData: any;
     mainImages: {
         front: File | null;
         back: File | null;
@@ -26,7 +23,7 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({
     mainImages,
     existingImages,
 }) => {
-    const selectedType = formData.productType?.find(type => type.type && type.price);
+    const selectedType = formData.productType?.find((type: any) => type.type && type.price);
     const basePrice = selectedType ? parseFloat(selectedType.price) : 0;
     const discountAmount = formData.discount ? parseFloat(formData.discount) : 0;
     const salePrice = basePrice && discountAmount > 0
@@ -186,7 +183,7 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({
                         <div className="border-b pb-4">
                             <h3 className="text-sm font-medium mb-3">Tags:</h3>
                             <div className="flex flex-wrap gap-2">
-                                {formData.tags.map(tag => (
+                                {formData.tags.map((tag: any) => (
                                     <Badge
                                         key={tag}
                                         variant="outline"
@@ -226,13 +223,6 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({
                                     {isSaleOnly ? 'Sale Only' : 'Sale Features'}
                                 </Badge>
                             </div>
-                            <Suspense fallback={
-                                <div className="h-20 bg-gray-100 rounded-md animate-pulse flex items-center justify-center">
-                                    <span className="text-sm text-gray-500">Loading add-ons...</span>
-                                </div>
-                            }>
-                                <ProductAddOnsFormSection />
-                            </Suspense>
                         </div>
                     )}
 

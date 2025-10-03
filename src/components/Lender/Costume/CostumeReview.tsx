@@ -3,8 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 
 import { Calendar, Shield, ShoppingBag, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
-import React, { memo, Suspense } from 'react';
-import ProductAddOnsFormSection from './Create-Components/CostumeAddOnsFormSection';
+import React, { memo } from 'react';
 
 interface ProductPreviewProps {
     formData: any;
@@ -224,13 +223,6 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({
                                     {isSaleOnly ? 'Sale Only' : 'Sale Features'}
                                 </Badge>
                             </div>
-                            <Suspense fallback={
-                                <div className="h-20 bg-gray-100 rounded-md animate-pulse flex items-center justify-center">
-                                    <span className="text-sm text-gray-500">Loading add-ons...</span>
-                                </div>
-                            }>
-                                <ProductAddOnsFormSection />
-                            </Suspense>
                         </div>
                     )}
 

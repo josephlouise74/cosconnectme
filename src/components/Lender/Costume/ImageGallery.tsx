@@ -34,8 +34,8 @@ const ImageGallery = React.memo(({ costume }: ImageGalleryProps) => {
         }
         if (costume.additional_images && costume.additional_images.length > 0) {
             const additionalImages = costume.additional_images
-                .map(img => ({ url: img.url, order: img.order + 2, type: 'additional' as const }))
-                .sort((a, b) => a.order - b.order);
+                .map((img: any) => ({ url: img.url, order: img.order + 2, type: 'additional' as const }))
+                .sort((a: any, b: any) => a.order - b.order);
             images.push(...additionalImages);
         }
         return images;
@@ -227,7 +227,7 @@ const ImageGallery = React.memo(({ costume }: ImageGalleryProps) => {
                         })}
                     </div>
                 </div>
-            )}  
+            )}
         </Card>
     );
 });

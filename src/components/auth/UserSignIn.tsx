@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useResendOtpCode, useSendOtpCode, useVerifyOtpCode } from "@/lib/api/otpApi";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn, signInWithGoogle } from "actions/auth";
@@ -15,9 +16,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { SignInImage } from "./SignInImage";
 import OTPDialog from "./OTPdialog";
-import { useResendOtpCode, useSendOtpCode, useVerifyOtpCode } from "@/lib/api/otpApi";
+import { SignInImage } from "./SignInImage";
 
 const SigninSchema = z.object({
     email: z.string().email("Invalid email address").max(60, "Invalid email address"),

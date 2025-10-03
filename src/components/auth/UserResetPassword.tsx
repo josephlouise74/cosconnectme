@@ -8,12 +8,12 @@ import { cn, COLORS, TYPOGRAPHY } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { resetPassword } from "../../../actions/auth";
-import { useRouter, useSearchParams } from "next/navigation";
 
 const ResetPasswordSchema = z.object({
     password: z

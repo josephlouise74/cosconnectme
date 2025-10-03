@@ -1,9 +1,9 @@
 "use client"
 
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pagination } from "@/lib/api/rentalApi"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 interface LenderRentalsPaginationProps {
     pagination: Pagination

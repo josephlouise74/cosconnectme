@@ -4,12 +4,11 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { MainImagesType, AdditionalImageType } from '@/lib/types/create-costume-type';
-import FileUploader from './Create-Components/CostumeFileUploader';
+import FileUploader from './UiProductsSections/ProductFileUploader';
 
 interface ProductImagesUploadProps {
-    mainImages: MainImagesType;
-    additionalImages: AdditionalImageType[];
+    mainImages: any;
+    additionalImages: any[];
     touched?: Record<string, boolean>;
     errors: {
         frontImage?: string;

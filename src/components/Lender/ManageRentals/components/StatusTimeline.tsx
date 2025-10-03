@@ -1,6 +1,6 @@
 // components/rental/StatusTimeline.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Clock, Package, RotateCw, ThumbsUp, Truck, DollarSign } from "lucide-react";
+import { Check, Clock, DollarSign, Package, RotateCw, ThumbsUp, Truck } from "lucide-react";
 
 interface StatusTimelineProps {
     currentStatus: string;

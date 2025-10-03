@@ -28,7 +28,7 @@ const WelcomePage = memo(() => {
     const {
         isAuthenticated,
         currentRole,
-        user,
+
         isLoading: authLoading,
         userRolesData
     } = useSupabaseAuth();
@@ -60,11 +60,13 @@ const WelcomePage = memo(() => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 500);
         // Wait for auth to load before showing content
         if (!authLoading) {
             const timer = setTimeout(() => setIsLoading(false), 500);
             return () => clearTimeout(timer);
         }
+        return () => clearTimeout(timer);
     }, [authLoading]);
 
     const [selectedDot, setSelectedDot] = useState(0);

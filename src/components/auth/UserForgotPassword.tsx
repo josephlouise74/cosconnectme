@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn, COLORS, TYPOGRAPHY, } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { KeyRound, Loader2, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";

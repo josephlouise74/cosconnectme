@@ -2,10 +2,10 @@
 
 import { Summary, useGetLenderRentalsRequests } from "@/lib/api/rentalApi"
 import { useState } from "react"
-import { LenderRentalsHeader } from "./components/LenderRentalsHeader"
 import { LenderRentalsFilters } from "./components/LenderRentalsFilters"
-import { LenderRentalsTable } from "./components/LenderRentalsTable"
+import { LenderRentalsHeader } from "./components/LenderRentalsHeader"
 import { LenderRentalsPagination } from "./components/LenderRentalsPagination"
+import { LenderRentalsTable } from "./components/LenderRentalsTable"
 
 interface LenderRentalsSectionProps {
     userId: string

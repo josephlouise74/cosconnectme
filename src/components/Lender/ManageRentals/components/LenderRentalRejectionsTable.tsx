@@ -1,16 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { format } from "date-fns"
-import { Eye, Calendar, Package, MoreHorizontal, XCircle, AlertCircle, RefreshCw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useGetRentalRejections } from "@/lib/api/rentalApi"
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
+import { format } from "date-fns"
+import { AlertCircle, Calendar, Eye, MoreHorizontal, Package, RefreshCw, XCircle } from "lucide-react"
+import { useState } from "react"
 
 interface RentalRejectionsTableProps {
     onViewDetails?: (rejectionId: string) => void

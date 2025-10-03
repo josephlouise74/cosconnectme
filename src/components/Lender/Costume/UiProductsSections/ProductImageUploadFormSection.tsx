@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import FileUploader from './ProductFileUploader';
-import { AdditionalImageType, MainImagesType } from '@/types/costumeTypeV2';
+
 
 interface ProductImagesUploadProps {
-    mainImages: MainImagesType;
-    additionalImages: AdditionalImageType[];
+    mainImages: any;
+    additionalImages: any[];
     touched?: Record<string, boolean>;
     errors: {
         frontImage?: string;
@@ -99,7 +99,7 @@ const ProductImagesUpload: React.FC<ProductImagesUploadProps> = ({
                     <div>
                         <Label htmlFor="back-image" className="mb-2 block">Back Image*</Label>
                         <FileUploader
-                            onFilesUpload={(files) => handleMainImageUpload('back', files[0] as any)}
+                            onFilesUpload={(files: any) => handleMainImageUpload('back', files[0] as any)}
                             maxFiles={1}
                             accept="image/*"
                             maxSize={10 * 1024 * 1024}

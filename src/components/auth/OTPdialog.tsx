@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Loader2, Shield, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Shield } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -51,6 +51,10 @@ const OTPDialog = ({
             const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
             return () => clearTimeout(timer);
         }
+        if (countdown === 0) {
+            setIsResending(false);
+        }
+        return () => setIsResending(false);
     }, [countdown]);
 
     // Focus first input when dialog opens

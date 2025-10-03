@@ -87,7 +87,7 @@ export function LenderRentalDetailsModal({
         payments,
         paymentSummary,
         refetch,
- 
+
     } = useGetRentalDataById(rentalId || "");
 
     // Reset state when modal closes or rental ID changes
