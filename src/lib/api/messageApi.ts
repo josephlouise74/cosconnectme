@@ -254,7 +254,7 @@ export const useMarkAsSeenMessages = () => {
 
     const mutation = useMutation<MarkMessagesAsSeenResponse, Error, { conversationId: string; userId: string }>({
         mutationFn: ({ conversationId, userId }) => markMessagesAsSeenRequest(conversationId, userId),
-        onSuccess: (data, variables) => {
+        onSuccess: (_, variables) => {
             // Invalidate userContacts query to refresh the contacts list
             queryClient.invalidateQueries({ queryKey: ["userContacts", variables.userId] });
         },

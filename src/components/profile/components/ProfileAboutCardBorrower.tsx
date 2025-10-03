@@ -307,7 +307,7 @@ const PersonalInfo = ({ profileData }: { profileData: ProcessedProfileData }) =>
                         <MapPin className="h-3 w-3" />
                         Location
                     </h3>
-                    {personal.addresses.map((address, index) => (
+                    {personal.addresses.map((address, _) => (
                         <div key={address.id} className="text-sm text-gray-600 dark:text-gray-400">
                             <p>{address.full_address}</p>
                             {address.address_info?.is_primary && (

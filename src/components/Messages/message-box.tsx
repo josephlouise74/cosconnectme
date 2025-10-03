@@ -64,7 +64,7 @@ export const MessageBox: React.FC<MessageBoxProps> = ({
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const { isAuthenticated, user } = useSupabaseAuth();
-    const { socket, isConnected, typingUsers, sendTypingStatus } = useSocket();
+    const { isConnected, typingUsers, sendTypingStatus } = useSocket();
     const { sendMessage: sendMessageApi, isLoading: isApiSending } = useSendMessage(); // Integrate API hook
     const form = useForm<MessageFormData>({
         defaultValues: {

@@ -4,12 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -17,13 +11,19 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
-import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 import { useDeleteCommunityPost, useUpdateMyPost } from '@/lib/api/communityApi'
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import { cn } from '@/lib/utils'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import { Heart, MessageCircle, MoreHorizontal, Share2, Loader2, Trash2, Edit2 } from 'lucide-react'
+import { Edit2, Heart, Loader2, MessageCircle, MoreHorizontal, Share2, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import { memo, useCallback, useEffect, useReducer, useState } from 'react'
 import { useInView } from 'react-intersection-observer'

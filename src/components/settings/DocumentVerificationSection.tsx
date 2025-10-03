@@ -6,12 +6,12 @@ import { FileText, Smartphone } from "lucide-react";
 import Image from "next/image";
 import { Control, useWatch } from "react-hook-form";
 
-import { FileUploader } from "./FileUploader";
-import { IconInputField } from "./FormFields";
-import { StoreDocumentsSection } from "./StoreDocumentsSection";
 
-import selfieWithId from "../../../../public/images/selfiewithid.jpg";
 import { LenderSignUpFormData } from "@/lib/zodSchema/lenderSchema";
+import selfieWithId from "../../../../public/images/selfiewithid.jpg";
+import { FileUploader } from "../Lender/SignUpForms/FileUploader";
+import { StoreDocumentsSection } from "../Lender/SignUpForms/StoreDocumentsSection";
+import { IconInputField } from "./FormFIelds";
 
 interface DocumentVerificationSectionProps {
     control: Control<LenderSignUpFormData>;

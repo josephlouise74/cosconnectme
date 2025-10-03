@@ -3,12 +3,12 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { useForm } from 'react-hook-form'
+import { useSendMessage } from '@/lib/api/messageApi'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, X } from 'lucide-react'
-import * as z from 'zod'
-import { refetchContacts, useSendMessage } from '@/lib/api/messageApi'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
 
 // Define the Zod schema for form validation
 const sendMessageSchema = z.object({

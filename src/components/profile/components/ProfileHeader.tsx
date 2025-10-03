@@ -20,7 +20,6 @@ import {
     XCircle
 } from 'lucide-react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import { useCallback, useReducer } from 'react'
 // Import the SendMessageModal
 import SendMessageModal from './SendMessageModal'; // Adjust the path if needed
@@ -125,7 +124,7 @@ const ProfileHeader = ({
     onEditProfile,
     userRolesData
 }: ProfileHeaderProps) => {
-    const router = useRouter();
+
     const [state, dispatch] = useReducer(profileReducer, initialState)
     // Extract data based on profile type
     const getProfileInfo = () => {

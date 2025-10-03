@@ -467,7 +467,7 @@ const RegisterSellerAccount = () => {
                                 )}
                                 <Tabs
                                     value={tabState.current}
-                                    onValueChange={(value) => setTabState(prev => ({ ...prev, current: value as any }))}
+                                    onValueChange={(value: any) => setTabState(prev => ({ ...prev, current: value as any }))}
                                     className="w-full"
                                 >
                                     <TabsList className="grid grid-cols-3 mb-8">

@@ -124,7 +124,11 @@ export default function MessageSection() {
         };
 
         socket.on('newMessage', handleNewMessage);
-        return () => socket.off('newMessage', handleNewMessage);
+
+        // Fixed: Wrap the socket.off call in a function that doesn't return its result
+        return () => {
+            socket.off('newMessage', handleNewMessage);
+        };
     }, [socket, userId, activeConversationId]);
 
     // Handle conversation selection
@@ -205,7 +209,7 @@ export default function MessageSection() {
                 const currentMessages = prev[activeConversationId] || [];
                 return {
                     ...prev,
-                    [activeConversationId]: currentMessages.map(msg =>
+                    [activeConversationId]: currentMessages.map((msg: any) =>
                         msg.id === 'temp-id' && msg.message === sendData.data?.message
                             ? { ...msg, id: sendData.data?.id, status: 'delivered' as const }
                             : msg

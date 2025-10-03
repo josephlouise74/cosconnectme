@@ -47,15 +47,16 @@ export const useSupabaseAuth = () => {
 
     // Handle roles error with retry logic
     useEffect(() => {
+        // Retry after a delay
+        const retryTimer = setTimeout(() => {
+            console.log(`Retrying user roles fetch (attempt ${retryCount + 1}/${maxRetries})`)
+            setRetryCount(prev => prev + 1)
+            refetchUserRoles()
+        }, 2000 * (retryCount + 1)) // Exponential backoff: 2s, 4s, 6s
+
         if (rolesError && authState.isAuthenticated && retryCount < maxRetries) {
             console.error("Error fetching user roles:", rolesError)
 
-            // Retry after a delay
-            const retryTimer = setTimeout(() => {
-                console.log(`Retrying user roles fetch (attempt ${retryCount + 1}/${maxRetries})`)
-                setRetryCount(prev => prev + 1)
-                refetchUserRoles()
-            }, 2000 * (retryCount + 1)) // Exponential backoff: 2s, 4s, 6s
 
             return () => clearTimeout(retryTimer)
         }
@@ -68,6 +69,9 @@ export const useSupabaseAuth = () => {
                     currentRole: authState.user.user_metadata.role as UserRole,
                 })
             }
+        }
+        return () => {
+            clearTimeout(retryTimer)
         }
     }, [rolesError, authState.isAuthenticated, authState.user?.user_metadata?.role, updateAuthState, retryCount, refetchUserRoles])
 

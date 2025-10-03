@@ -375,6 +375,7 @@ const InfoField: React.FC<InfoFieldProps> = ({ label, value, capitalize, multili
 interface DocumentStatusProps {
     label: string
     hasDocument: boolean
+    documentUrl?: string | null
 }
 
 const DocumentStatus: React.FC<DocumentStatusProps> = ({ label, hasDocument }) => (

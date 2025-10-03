@@ -3,6 +3,7 @@ import { useSwitchRole } from "@/lib/api/userApi";
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth";
 import { useState } from "react";
 import { ArrowRightLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SwitchRoleButton({ iconOnly = false, ...props }: { iconOnly?: boolean; afterSwitch?: () => void }) {
     const { userRolesData, isLoading } = useSupabaseAuth();
@@ -26,6 +27,7 @@ export default function SwitchRoleButton({ iconOnly = false, ...props }: { iconO
         const targetRole = getTargetRole();
         if (!userRolesData?.user_id || !targetRole) {
             setError("User ID or target role not found.");
+            toast(error || "User ID or target role not found.");
             return;
         }
         try {
@@ -34,6 +36,7 @@ export default function SwitchRoleButton({ iconOnly = false, ...props }: { iconO
             // Optionally, refresh user data or redirect here
         } catch (err: any) {
             setError(err.message || "Failed to switch role.");
+            toast(error || "Failed to switch role.");
         }
     };
 
