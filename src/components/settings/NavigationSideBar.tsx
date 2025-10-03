@@ -1,7 +1,7 @@
-import React from 'react'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { User, Store, Trash2, Shield, LucideIcon } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { LucideIcon, Shield, Store, Trash2, User } from 'lucide-react'
+import React from 'react'
 
 interface NavigationTab {
     value: string

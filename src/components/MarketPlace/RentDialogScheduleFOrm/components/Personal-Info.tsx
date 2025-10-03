@@ -1,14 +1,14 @@
 "use client"
-import type React from "react"
-import { useFormContext } from "react-hook-form"
-import { User, Phone, Mail, Calendar, AlertCircle } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useEffect } from "react"
-import type { RentalBookingFormData } from "./type"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
+import { AlertCircle, Calendar, Mail, Phone, User } from "lucide-react"
+import type React from "react"
+import { useEffect } from "react"
+import { useFormContext } from "react-hook-form"
+import type { RentalBookingFormData } from "./type"
 
 export const PersonalDetailsForm: React.FC = () => {
     const {

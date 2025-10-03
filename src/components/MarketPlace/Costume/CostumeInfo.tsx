@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useSwitchRole } from '@/lib/api/authApi';
+
 import { useSendMessageInquire } from '@/lib/api/messageApi';
+import { useSwitchRole } from '@/lib/api/userApi';
 
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth';
-import { CostumeByName } from '@/lib/types/marketplace/get-costume';
 import { cn } from '@/lib/utils';
 import {
     Heart,
@@ -26,7 +26,7 @@ import React from 'react';
 import { toast } from "sonner";
 
 interface CostumeInfoProps {
-    costume: CostumeItem;
+    costume: any;
 }
 
 const formatCurrency = (amount: string | number) => {
@@ -194,7 +194,7 @@ const CostumeInfo = React.memo(({ costume }: CostumeInfoProps) => {
                     </div>
                     {costume.tags && costume.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
-                            {costume.tags.map((tag, index) => (
+                            {costume.tags.map((tag: any, index: any) => (
                                 <Badge key={index} variant="outline" className="text-xs truncate max-w-[60px]" title={tag}>
                                     {tag}
                                 </Badge>
@@ -215,7 +215,7 @@ const CostumeInfo = React.memo(({ costume }: CostumeInfoProps) => {
                             </div>
                             {altRentOffers && altRentOffers.length > 0 && (
                                 <div className="flex flex-wrap gap-2">
-                                    {altRentOffers.map((offer, idx) => (
+                                    {altRentOffers.map((offer: any, idx: any) => (
                                         <Badge key={idx} variant="outline" className="text-xs">
                                             {formatCurrency(offer.price)} / {offer.type}
                                         </Badge>
@@ -248,7 +248,7 @@ const CostumeInfo = React.memo(({ costume }: CostumeInfoProps) => {
                     </h3>
                     {costume.add_ons && costume.add_ons.length > 0 ? (
                         <div className="grid gap-3">
-                            {costume.add_ons.map((addon) => (
+                            {costume.add_ons.map((addon: any) => (
                                 <div
                                     key={addon.id}
                                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border hover:border-rose-200 transition-colors gap-3"

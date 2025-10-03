@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FullScreenLoader } from "@/components/ui/full-screen-loader"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
-import { Building, Calendar, CheckCircle, Mail, MapPin, Phone, XCircle, FileText, Camera, Award } from "lucide-react"
+import { Award, Building, Calendar, Camera, CheckCircle, FileText, Mail, MapPin, Phone, XCircle } from "lucide-react"
 
 import { useSwitchRole } from "@/lib/api/userApi"
 import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth"
@@ -28,7 +28,7 @@ const PersonalInfo = dynamic(() => import("./PersonalInfo"))
 const NavigationSidebar = dynamic(() => import("./NavigationSideBar"))
 
 interface BusinessInfoGridProps {
-    userData: UserRolesResponseData
+    userData: any
 }
 
 const BusinessInfoGrid: React.FC<BusinessInfoGridProps> = ({ userData }) => {
@@ -151,18 +151,18 @@ const BusinessInfoGrid: React.FC<BusinessInfoGridProps> = ({ userData }) => {
                         <div className="space-y-4">
                             <InfoField
                                 label="Business Name"
-                                value={businessInfo.business_name as string}
+                                value={businessInfo.business_name as string || ""}
                                 icon={<Building className="w-4 h-4" />}
                             />
                             <InfoField
                                 label="Business Type"
-                                value={businessInfo.business_type}
+                                value={businessInfo.business_type || ""}
                                 capitalize
                                 badge
                             />
                             <InfoField
                                 label="Phone Number"
-                                value={businessInfo.business_phone_number}
+                                value={businessInfo.business_phone_number || ""}
                                 icon={<Phone className="w-4 h-4" />}
                             />
                             {businessInfo.business_telephone && (
@@ -174,7 +174,7 @@ const BusinessInfoGrid: React.FC<BusinessInfoGridProps> = ({ userData }) => {
                             )}
                             <InfoField
                                 label="Email"
-                                value={businessInfo.business_email}
+                                value={businessInfo.business_email || ""}
                                 icon={<Mail className="w-4 h-4" />}
                             />
                         </div>
@@ -191,15 +191,15 @@ const BusinessInfoGrid: React.FC<BusinessInfoGridProps> = ({ userData }) => {
                             <h3 className="text-lg font-semibold">Location & Address</h3>
                         </div>
                         <div className="space-y-4">
-                            <InfoField label="Region" value={businessInfo.address?.region} badge />
-                            <InfoField label="Province" value={businessInfo.address?.province} />
-                            <InfoField label="City" value={businessInfo.address?.city?.name} />
-                            <InfoField label="Barangay" value={businessInfo.address?.barangay} />
-                            <InfoField label="Street Address" value={businessInfo.address?.street} />
-                            <InfoField label="ZIP Code" value={businessInfo.address?.zip_code} />
+                            <InfoField label="Region" value={businessInfo.address?.region || ""} badge />
+                            <InfoField label="Province" value={businessInfo.address?.province || ""} />
+                            <InfoField label="City" value={businessInfo.address?.city?.name || ""} />
+                            <InfoField label="Barangay" value={businessInfo.address?.barangay || ""} />
+                            <InfoField label="Street Address" value={businessInfo.address?.street || ""} />
+                            <InfoField label="ZIP Code" value={businessInfo.address?.zip_code || ""} />
                             <InfoField
                                 label="Complete Address"
-                                value={businessInfo.address?.business_address}
+                                value={businessInfo.address?.business_address || ""}
                                 multiline
                             />
                         </div>
@@ -256,7 +256,7 @@ const BusinessInfoGrid: React.FC<BusinessInfoGridProps> = ({ userData }) => {
                         )}
                         <InfoField
                             label="Terms & Conditions"
-                            value={businessInfo.terms_and_conditions}
+                            value={businessInfo.terms_and_conditions || ""}
                             badge
                         />
                     </div>
@@ -275,17 +275,17 @@ const BusinessInfoGrid: React.FC<BusinessInfoGridProps> = ({ userData }) => {
                         </div>
                         <Badge
                             variant={
-                                hasDocument(businessInfo.business_permit) &&
-                                    hasDocument(businessInfo.dti_certificate) &&
-                                    hasDocument(businessInfo.storefront_photo)
+                                hasDocument(businessInfo.business_permit || "") &&
+                                    hasDocument(businessInfo.dti_certificate || "") &&
+                                    hasDocument(businessInfo.storefront_photo || "")
                                     ? "default"
                                     : "secondary"
                             }
                             className="text-xs"
                         >
-                            {hasDocument(businessInfo.upload_business_permit) &&
-                                hasDocument(businessInfo.upload_dti_certificate) &&
-                                hasDocument(businessInfo.upload_storefront_photo)
+                            {hasDocument(businessInfo.upload_business_permit || "") &&
+                                hasDocument(businessInfo.upload_dti_certificate || "") &&
+                                hasDocument(businessInfo.upload_storefront_photo || "")
                                 ? "All Documents Complete"
                                 : "Documents Incomplete"}
                         </Badge>
@@ -375,10 +375,9 @@ const InfoField: React.FC<InfoFieldProps> = ({ label, value, capitalize, multili
 interface DocumentStatusProps {
     label: string
     hasDocument: boolean
-    documentUrl?: string | null
 }
 
-const DocumentStatus: React.FC<DocumentStatusProps> = ({ label, hasDocument, documentUrl }) => (
+const DocumentStatus: React.FC<DocumentStatusProps> = ({ label, hasDocument }) => (
     <div className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all duration-200 ${hasDocument
         ? "border-green-200 bg-green-50 hover:bg-green-100"
         : "border-red-200 bg-red-50 hover:bg-red-100"

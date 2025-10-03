@@ -1,5 +1,6 @@
 "use client"
 
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command'
@@ -9,14 +10,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 
 import { useGetAllDataBarangays } from '@/lib/api/barangaysApi'
 import { useUpdateInfoBorrower } from '@/lib/api/borrowerApi'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
+import type { UserRolesResponseData } from '@/lib/types/userType'
 import { cn } from '@/lib/utils'
 import { PersonalDetailsForm, personalDetailsSchema } from '@/lib/zodSchema/userBorrowerSchema'
-import type { UserRolesResponseData } from '@/lib/types/userType'
 
 import { municipalities } from '@/utils/philippine_datasets/municipality'
 import { provinces } from '@/utils/philippine_datasets/province'

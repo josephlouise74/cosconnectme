@@ -10,9 +10,9 @@ import { BookedDateRange, useGetBookedDateRanges } from "@/lib/api/rentalApi"
 import { Calendar, Clock, Info, MapPin, Truck } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useFormContext } from "react-hook-form"
+import { toast } from "sonner"
 import { generateMonthData } from "../utils/calendarUtils"
 import { CostumeRentalInfo, PartialRentalBookingFormData } from "./type"
-import { toast } from "sonner"
 
 interface ScheduleFormProps {
     costumeInfo: CostumeRentalInfo
@@ -285,7 +285,7 @@ const ScheduleForm = ({ costumeInfo, costumeId }: ScheduleFormProps) => {
                 <CardContent>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {calendarData.map((monthData, index) => (
-                            <div key={`${monthData.month}-${monthData.year}`} className="space-y-4">
+                            <div key={`${monthData.month}-${monthData.year}=${index}`} className="space-y-4">
                                 <h3 className="text-lg font-semibold text-center">
                                     {monthData.monthName} {monthData.year}
                                 </h3>

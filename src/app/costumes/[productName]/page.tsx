@@ -6,7 +6,7 @@ import CostumeDetailViewer from '@/components/MarketPlace/Costume/CostumeProduct
 const ProductNamePage = () => {
     return (
         <>
-            test
+            <CostumeDetailViewer />
         </>
     )
 }

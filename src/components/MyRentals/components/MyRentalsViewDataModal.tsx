@@ -5,10 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useGetRentalDataById, useUpdateRentalRequestStatus } from "@/lib/api/rentalApi";
-import { Calendar, Check, CreditCard, Loader2, MapPin, Package, User, X } from "lucide-react";
+import { useGetRentalDataById } from "@/lib/api/rentalApi";
+import { Calendar, CreditCard, Loader2, MapPin, Package, User } from "lucide-react";
 import Image from "next/image";
-import { useEffect } from "react";
 
 
 interface BorrowerRentalDetailsModalProps {
@@ -35,75 +34,11 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
         refetch
     } = useGetRentalDataById(shouldFetch ? rentalId : "");
 
-    // Initialize the update mutation hook
-    const {
-        updateStatusAsync,
-        isLoading: isPending,
-        error: updateError
-    } = useUpdateRentalRequestStatus();
 
-    // Handle modal closure after successful update
-    useEffect(() => {
-        if (!isPending && !updateError && rental?.id) {
-            // If an update was successful, refetch data to reflect changes
-            refetch();
-        }
-    }, [isPending, updateError, rental?.id, refetch]);
-
-    // Handle accept action
-    const handleAccept = async () => {
-        if (costumeSnapshot?.lender_info?.uid && rental?.id) {
-            try {
-                await updateStatusAsync({
-                    rental_id: rental.id,
-                    lender_id: costumeSnapshot.lender_info.uid,
-                    status: "accept"
-                });
-                refetch();
-            } catch (error) {
-                console.error("Failed to accept rental request:", error);
-            }
-        }
-    };
-
-    // Handle reject action
-    const handleReject = async () => {
-        if (costumeSnapshot?.lender_info?.uid && rental?.id) {
-            try {
-                await updateStatusAsync({
-                    rental_id: rental.id,
-                    lender_id: costumeSnapshot.lender_info.uid,
-                    status: "reject",
-                    reject_message: "" // Optional message
-                });
-                refetch();
-            } catch (error) {
-                console.error("Failed to reject rental request:", error);
-            }
-        }
-    };
-
-    // Determine if actions should be shown - only for pending status for borrowers
-    const showActionButtons = false; // Borrowers don't take actions on their own rentals
 
     // Calculate payment summary safely using the payment_summary from API
     const totalPaid = paymentSummary?.total_paid || "0.00";
     const balanceDue = paymentSummary?.pending_amount || "0.00";
-    const isFullyPaid = parseFloat(balanceDue) <= 0;
-
-    // Status badge variant
-    const getStatusBadgeVariant = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'confirmed': return 'default';
-            case 'accepted': return 'success';
-            case 'delivered': return 'outline';
-            case 'returned': return 'secondary';
-            case 'completed': return 'success';
-            case 'rejected': return 'destructive';
-            case 'cancelled': return 'destructive';
-            default: return 'secondary';
-        }
-    };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -135,13 +70,6 @@ export function BorrowerRentalDetailsModal({ isOpen, onClose, rentalId }: Borrow
                         >
                             Retry
                         </Button>
-                    </div>
-                )}
-
-                {/* Update Error */}
-                {updateError && (
-                    <div className="text-center py-3 text-red-600 text-sm">
-                        Update failed: {updateError?.message || "Unknown error occurred"}
                     </div>
                 )}
 

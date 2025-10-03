@@ -13,6 +13,7 @@ import { useSupabaseAuth } from "@/lib/hooks/useSupabaseAuth";
 import { LenderSignUpFormData, lenderSignUpSchema } from "@/lib/zodSchema/lenderSchema";
 import { handleSingleImageUpload } from "@/utils/supabase/fileUpload";
 
+import { LenderFormDataType } from "@/lib/types/lenderType";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Store } from "lucide-react";
 import Link from "next/link";
@@ -21,7 +22,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { BusinessInfoSection } from "../Lender/SignUpForms/BusinessInfoSection";
 import { DocumentVerificationSection } from "../Lender/SignUpForms/DocumentVerificationInfoSection";
-import { LenderFormDataType } from "@/lib/types/lenderType";
 
 // Types
 interface FileUploadState {
@@ -167,13 +167,13 @@ const RegisterSellerAccount = () => {
 
         try {
             // Create a deep copy of the data to avoid mutating the original
-            const preparedData: LenderSignUpFormData = { 
+            const preparedData: LenderSignUpFormData = {
                 ...data,
                 businessEmail: data.businessEmail,
                 businessDescription: data.businessDescription || '', // Ensure businessDescription is always a string
                 city: data.city || { id: '', name: '' } // Ensure city is always an object
             };
-            
+
             const uploadTasks: Promise<void>[] = [];
             let completedUploads = 0;
 
@@ -317,7 +317,7 @@ const RegisterSellerAccount = () => {
     const onSubmit = useCallback(async (values: LenderSignUpFormData) => {
         try {
             setProfileError(""); // Reset error on submit
-            
+
             // Validate personal info fields
             const requiredFields = [
                 { value: userRolesData?.personal_info?.first_name, name: 'First Name' },
@@ -325,11 +325,11 @@ const RegisterSellerAccount = () => {
                 { value: userRolesData?.username, name: 'Username' },
                 { value: userRolesData?.email, name: 'Email' },
             ];
-            
+
             const missingFields = requiredFields
                 .filter(field => !field.value || field.value.trim() === "")
                 .map(field => field.name);
-                
+
             if (missingFields.length > 0) {
                 setProfileError(
                     `Missing required profile information: ${missingFields.join(', ')}. Please update your profile before registering as a lender.`

@@ -1,7 +1,7 @@
 "use client"
 
-import { useParams } from "next/navigation"
 import CostumeDetailViewer from "@/components/MarketPlace/Costume/CostumeProductInfoSection"
+import { useParams } from "next/navigation"
 
 const Page = () => {
     const params = useParams()

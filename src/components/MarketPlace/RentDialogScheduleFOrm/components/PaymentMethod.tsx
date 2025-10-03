@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { CheckCircle, Shield, Smartphone, AlertCircle } from "lucide-react"
+import { AlertCircle, CheckCircle, Shield, Smartphone } from "lucide-react"
 import type React from "react"
 import { useFormContext } from "react-hook-form"
 import { PartialRentalBookingFormData } from "./type"

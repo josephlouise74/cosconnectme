@@ -4,14 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CostumeItem } from '@/types/costumes/marketplaceTypeV2';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import React, { useMemo, useState, useCallback } from 'react';
 import Image from 'next/image';
 
 interface ImageGalleryProps {
-    costume: CostumeItem;
+    costume: any;
 }
 
 interface ImageState {
@@ -35,8 +35,8 @@ const ImageGallery = React.memo(({ costume }: ImageGalleryProps) => {
         }
         if (costume.additional_images && costume.additional_images.length > 0) {
             const additionalImages = costume.additional_images
-                .map(img => ({ url: img.url, order: img.order + 2, type: 'additional' as const }))
-                .sort((a, b) => a.order - b.order);
+                .map((img: any) => ({ url: img.url, order: img.order + 2, type: 'additional' as const }))
+                .sort((a: any, b: any) => a.order - b.order);
             images.push(...additionalImages);
         }
         return images;
@@ -228,7 +228,7 @@ const ImageGallery = React.memo(({ costume }: ImageGalleryProps) => {
                         })}
                     </div>
                 </div>
-            )}  
+            )}
         </Card>
     );
 });

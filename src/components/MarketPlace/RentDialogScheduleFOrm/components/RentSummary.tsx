@@ -2,12 +2,12 @@
 
 import React from "react"
 
-import { useFormContext } from "react-hook-form"
-import { Check, Calendar, MapPin, User, CreditCard, Truck } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
-import { Badge } from "@/components/ui/badge"
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Calendar, Check, CreditCard, MapPin, Truck, User } from "lucide-react"
+import { useFormContext } from "react-hook-form"
 import { CostumeRentalInfo, PartialRentalBookingFormData } from "./type"
 
 interface RentSummaryProps {
