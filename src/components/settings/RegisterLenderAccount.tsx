@@ -20,8 +20,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { BusinessInfoSection } from "../Lender/SignUpForms/BusinessInfoSection";
-import { DocumentVerificationSection } from "../Lender/SignUpForms/DocumentVerificationInfoSection";
 
 // Types
 interface FileUploadState {
@@ -486,7 +484,7 @@ const RegisterSellerAccount = () => {
                                     </TabsList>
 
                                     <TabsContent value="business" className="space-y-6">
-                                        <BusinessInfoSection control={form.control} />
+                                        {/*  <BusinessInfoSection control={form.control} /> */}
                                         <div className="flex justify-end">
                                             <Button
                                                 type="button"
@@ -499,7 +497,7 @@ const RegisterSellerAccount = () => {
                                     </TabsContent>
 
                                     <TabsContent value="document" className="space-y-6">
-                                        <DocumentVerificationSection control={form.control} />
+                                        {/* <DocumentVerificationSection control={form.control} /> */}
                                         <div className="flex justify-between">
                                             <Button
                                                 type="button"
