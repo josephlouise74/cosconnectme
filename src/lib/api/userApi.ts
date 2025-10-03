@@ -1,11 +1,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from 'axios';
+import { toast } from "sonner";
 import { BorrowerProfileResponse } from "../types/borrowerType";
+import { BusinessResponse, UserResponse } from "../types/profile/get-profile-data";
 import { SwitchRoleResponse, UpdatePersonalInfoResponse, UserPersonalInfoFormData, UserRolesResponse, UserRolesResponseData } from "../types/userType";
 import { axiosApiClient } from "./axiosApiClient";
-import { toast } from "sonner";
-import { BusinessResponse, UserResponse } from "../types/profile/get-profile-data";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';

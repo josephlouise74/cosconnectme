@@ -1,8 +1,7 @@
 "use client"
-import { User } from '@/types/user'
+
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
-import { CommentData } from '@/lib/apis/communityPostApi'
 
 interface CommentFormData {
     content: string
@@ -11,10 +10,10 @@ interface CommentFormData {
 
 interface UseCommentsProps {
     postId: string
-    initialComments?: CommentData[]
+    initialComments?: any[]
     onComment?: ((postId: string, comment: CommentFormData) => Promise<void>) | undefined
     onCommentLike?: (commentId: string) => Promise<void>
-    currentUser: User | undefined
+    currentUser: any | undefined
 }
 
 export const useComments = ({
@@ -24,18 +23,18 @@ export const useComments = ({
     onCommentLike,
     currentUser
 }: UseCommentsProps) => {
-    const [comments, setComments] = useState<CommentData[]>(initialComments)
+    const [comments, setComments] = useState<any[]>(initialComments)
     const [isLoading, setIsLoading] = useState(false)
 
-    const addComment = useCallback(async (commentData: CommentFormData) => {
+    const addComment = useCallback(async (any: CommentFormData) => {
         if (!onComment || !currentUser) return
 
         setIsLoading(true)
         try {
-            await onComment(postId, commentData)
+            await onComment(postId, any)
             // Optimistic update
             const now = new Date();
-            const newComment: CommentData = {
+            const newComment: any = {
                 id: Math.random().toString(36).substr(2, 9),
                 postId,
                 postAuthorId: {
@@ -50,8 +49,8 @@ export const useComments = ({
                     userEmail: currentUser.email,
                     userAvatarUrl: currentUser.avatar
                 },
-                content: commentData.content,
-                images: commentData.images || [],
+                content: any.content,
+                images: any.images || [],
                 createdAt: {
                     _seconds: Math.floor(now.getTime() / 1000),
                     _nanoseconds: (now.getTime() % 1000) * 1e6
@@ -94,7 +93,7 @@ export const useComments = ({
         }
     }, [onCommentLike])
 
-    const updateComments = useCallback((newComments: CommentData[]) => {
+    const updateComments = useCallback((newComments: any[]) => {
         setComments(newComments)
     }, [])
 

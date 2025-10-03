@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect, memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Reply, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import PostImages from './PostImages';
+import { ChevronDown, ChevronUp, Heart, MessageCircle, Reply, Send } from 'lucide-react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 interface CommentWithMeta {
     id: string;
@@ -84,9 +83,7 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
         }
     };
 
-    const handleToggleReplies = async () => {
-        await onToggleReplies(comment.id);
-    };
+
 
     const handleLoadMoreReplies = async () => {
         if (onLoadMoreReplies) {

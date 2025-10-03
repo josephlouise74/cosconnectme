@@ -88,6 +88,9 @@ const CommentDialog: React.FC<CommentDialogProps> = ({
             }, 800)
             return () => clearTimeout(timer)
         }
+        return () => {
+            setIsPostLoading(false)
+        }
     }, [isOpen])
 
     const handleImageUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,7 +263,7 @@ const CommentDialog: React.FC<CommentDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-            <DialogContent className="max-h-[90vh] p-0 overflow-hidden" size="full">
+            <DialogContent className="max-h-[90vh] p-0 overflow-hidden" >
 
 
                 <div className="flex h-[calc(90vh-80px)]">

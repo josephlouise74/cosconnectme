@@ -2,10 +2,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { CommunityComment } from '@/types/postType';
+
 import { MessageCircle, Send } from 'lucide-react';
 import React, { memo, useEffect, useRef, useState } from 'react';
-import CommentItem from './CommentItem';
 
 interface CurrentUser {
     id: string | undefined;
@@ -13,7 +12,7 @@ interface CurrentUser {
     avatar: string | undefined;
 }
 
-interface CommentWithMeta extends CommunityComment {
+interface CommentWithMeta {
     heart_count?: number;
     is_liked?: boolean;
     replies_count?: number;
@@ -32,13 +31,12 @@ interface CommentsSectionProps {
     currentUser: CurrentUser;
     onSubmitComment: (content: string) => Promise<void>;
     onReply: (parentId: string, content: string) => Promise<void>;
-    onLike: (commentId: string) => Promise<void>;
     onToggleReplies: (commentId: string) => Promise<void>;
     onLoadMore: () => Promise<void>;
     totalCommentsCount?: number;
     expandedReplies?: Record<string, boolean>;
     replyLoadingStates?: Record<string, boolean>;
-    commentReplies?: Record<string, CommunityComment[]>;
+    commentReplies?: Record<string, any[]>;
     replyHasMore?: Record<string, boolean>;
     onLoadMoreReplies?: (commentId: string) => Promise<void>;
 }
@@ -157,16 +155,9 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
     loadingStates,
     currentUser,
     onSubmitComment,
-    onReply,
-    onLike,
-    onToggleReplies,
+
     onLoadMore,
     totalCommentsCount,
-    expandedReplies = {},
-    replyLoadingStates = {},
-    commentReplies = {},
-    replyHasMore = {},
-    onLoadMoreReplies
 }) => {
     return (
         <div className="bg-white border-t">
@@ -204,7 +195,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
                     <EmptyState />
                 ) : (
                     <div className="space-y-4">
-                        {comments.map((comment) => {
+                        {/*    {comments.map((comment) => {
                             console.log('Comment:', {
                                 id: comment.id,
                                 parent_comment_id: comment.parent_comment_id,
@@ -230,7 +221,9 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({
                                 />
                             );
                         })}
+ */}
 
+                        test
                         {hasMore && (
                             <Button
                                 onClick={onLoadMore}

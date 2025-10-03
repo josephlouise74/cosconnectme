@@ -117,7 +117,7 @@ const SocialFeedSection = () => {
     const {
         register,
         handleSubmit,
-        setValue,
+
         watch,
         formState: { errors },
     } = useForm<SearchForm>({
@@ -138,7 +138,7 @@ const SocialFeedSection = () => {
 
     // Trigger search when onlyForSale changes
     useEffect(() => {
-        const subscription = watch((value, { name }) => {
+        const subscription = watch((_, { name }) => {
             if (name === "onlyForSale") {
                 handleSubmit(onSubmit)();
             }

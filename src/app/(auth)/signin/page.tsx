@@ -1,5 +1,5 @@
 import UserSignIn from '@/components/auth/UserSignIn'
-import React, { Suspense } from 'react'
+import { Suspense } from 'react'
 
 // Simple loading component
 const SignInLoading = () => (
