@@ -5,9 +5,15 @@ import React, { Suspense } from 'react'
 
 const ResetPasswordPage = () => {
     return (
-        <Suspense fallback={<Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />}>
-            <UserResetPassword />
-        </Suspense>
+        <div className="flex items-center justify-center min-h-screen">
+            <Suspense fallback={
+                <div className="flex items-center justify-center">
+                    <Loader2 className="animate-spin h-8 w-8" />
+                </div>
+            }>
+                <UserResetPassword />
+            </Suspense>
+        </div>
     )
 }
 
