@@ -5,7 +5,7 @@ import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth';
 
 import { MessageSideBar } from './MessageSidebar';
 import { MessageBox } from './message-box';
-import { Contact, refetchContacts, useGetContacts, useSendMessage } from '@/lib/api/messageApi';
+import { Contact, useGetContacts, useRefetchContacts, useSendMessage } from '@/lib/api/messageApi';
 
 // Types
 interface Conversation {
@@ -52,8 +52,8 @@ export default function MessageSection() {
     });
     // Add this useEffect to refetch contacts when the component mounts
     useEffect(() => {
-        refetchContacts(userId);
-    }, [refetchContacts, userId]);  // refetchContacts is stable, but including it in deps is a good practice
+        useRefetchContacts(userId);
+    }, [userId]);  // refetchContacts is stable, but including it in deps is a good practice
 
     // Map fetched contacts to conversations once data is available
     useEffect(() => {

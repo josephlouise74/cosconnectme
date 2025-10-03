@@ -90,13 +90,15 @@ export const useGetContacts = ({ userId, cursor, limit }: GetContactsParams) => 
     };
 };
 
-export const refetchContacts = async (userId: string) => {
+export const useRefetchContacts = (userId: string) => {
     const queryClient = useQueryClient();
 
-    return queryClient.invalidateQueries({
-        queryKey: ['contacts', userId],
-        refetchType: 'active', // Only refetch active queries
-    });
+    return () => {
+        return queryClient.invalidateQueries({
+            queryKey: ['contacts', userId],
+            refetchType: 'active',
+        });
+    };
 };
 
 const API_BASE_URL = "http://localhost:8000/api/v2"
