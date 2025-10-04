@@ -129,6 +129,31 @@ export const useDeleteNotification = () => {
 }
 
 // ===================================
+// GET unread notification count
+// ===================================
+export const useGetUnreadNotificationCount = (role: string, email: string) => {
+    const getUnreadCountApiRequest = async (): Promise<{ success: boolean; data: { unreadCount: number } }> => {
+        const response = await axiosApiClient.get<{ success: boolean; data: { unreadCount: number } }>(
+            "/notifications/unread-count",
+            {
+                params: { role, email },
+            }
+        );
+        return response.data;
+    };
+
+    return useQuery<{ success: boolean; data: { unreadCount: number } }>({
+        queryKey: ["unread-notification-count", role, email],
+        queryFn: getUnreadCountApiRequest,
+        retry: 0,
+        retryDelay: 0,
+        refetchInterval: 3000, // Refetch every 30 seconds
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+    });
+};
+
+// ===================================
 // MARK a single notification as READ
 // ===================================
 export const useMarkAsReadNotification = () => {

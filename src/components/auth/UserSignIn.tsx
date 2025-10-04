@@ -325,6 +325,7 @@ const UserSignIn = () => {
                                             <FormField
                                                 control={form.control}
                                                 name="email"
+                                                
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Email</FormLabel>
@@ -334,6 +335,7 @@ const UserSignIn = () => {
                                                                 <Input
                                                                     type="email"
                                                                     placeholder="Enter your email"
+                                                                    maxLength={35}
                                                                     className={cn(
                                                                         "pl-10 h-12",
                                                                         fieldErrors.email && "border-destructive focus-visible:ring-destructive"
@@ -361,6 +363,7 @@ const UserSignIn = () => {
                                                                 <Input
                                                                     type={showPassword ? "text" : "password"}
                                                                     placeholder="Enter your password"
+                                                                    maxLength={45}
                                                                     className={cn(
                                                                         "pl-10 h-12",
                                                                         fieldErrors.password && "border-destructive focus-visible:ring-destructive"

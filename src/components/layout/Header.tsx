@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useGetBorrowerProfile } from "@/lib/api/borrowerApi";
+import { useGetUnreadNotificationCount } from "@/lib/api/notificationsApi";
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Bell, HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User } from 'lucide-react';
+import { ArrowLeft, Bell, HelpCircle, LogIn, LogOut, Menu, Moon, Settings, ShoppingCart, Sun, User, Shirt } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -20,8 +21,6 @@ const Header = () => {
     const [user, setUser] = useState<any>(null);
     const router = useRouter();
     const pathname = usePathname();
-    const [notificationCount, setNotificationCount] = useState(3); // Example: 3 unread notifications
-    const [hasNewNotifications, setHasNewNotifications] = useState(true); // Example: has new notifications
 
     useEffect(() => {
         setMounted(true);
@@ -47,6 +46,15 @@ const Header = () => {
 
     // Fetch profile data using the username (only if authenticated)
     const { data: profileData } = useGetBorrowerProfile(isAuthenticated ? username : "");
+
+    // Fetch unread notification count
+    const { data: unreadCountData, isLoading: isUnreadCountLoading } = useGetUnreadNotificationCount(
+        isAuthenticated ? (userRole || "borrower") : "borrower",
+        isAuthenticated ? (user?.user_metadata?.email || user?.email || "") : ""
+    );
+
+    const unreadCount = unreadCountData?.data?.unreadCount || 0;
+    const hasNewNotifications = unreadCount > 0;
 
     // Compute display name
     let displayName = null;
@@ -74,6 +82,17 @@ const Header = () => {
     const handleLogout = async () => {
         await signOut();
     };
+
+    const handleNotificationClick = () => {
+        // Clear the notification count when clicked
+        router.push('/notifications');
+    };
+
+    const handleRentalClick = () => {
+
+        router.push('/my-rentals')
+    }
+
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-primary-950/90 dark:border-primary-900">
             <div className="container flex h-16 items-center justify-between mx-auto px-4">
@@ -116,32 +135,49 @@ const Header = () => {
                 </div>
                 {/* Action Buttons */}
                 <div className="flex items-center space-x-4">
-                    {/* Notification Bell */}
-                    <div className="relative">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                                "hidden md:flex cursor-pointer",
-                                "hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-950",
-                                "transition-colors duration-300",
-                                hasNewNotifications && "animate-pulse"
+
+                {isAuthenticated && (
+                        <div className="relative">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    "hidden md:flex cursor-pointer",
+                                    "hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-950",
+                                    "transition-colors duration-300",
+                                    hasNewNotifications && "animate-pulse"
+                                )}
+                                onClick={handleNotificationClick}
+                                disabled={isUnreadCountLoading}
+                            >
+                                <Bell className="h-5 w-5" />
+                            </Button>
+                            {unreadCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-xs font-medium text-white">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
                             )}
-                            onClick={() => {
-                                // TODO: Handle notification click
-                                setHasNewNotifications(false);
-                                setNotificationCount(0);
-                                router.push('/notifications');
-                            }}
-                        >
-                            <Bell className="h-5 w-5" />
-                        </Button>
-                        {notificationCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-xs font-medium text-white">
-                                {notificationCount > 9 ? '9+' : notificationCount}
-                            </span>
-                        )}
-                    </div>
+                        </div>
+                    )}
+
+                    {/* My-rental Button */}
+                    {isAuthenticated && (
+                        <div className="relative">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    "hidden md:flex cursor-pointer",
+                                    "hover:text-rose-600 hover:bg-rose-50 dark:hover:text-rose-400 dark:hover:bg-rose-950",
+                                    "transition-colors duration-300",
+                                )}
+                                onClick={handleRentalClick}
+                            >
+                                <Shirt className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    )}
+
                     {/* User Profile Dropdown */}
                     {isAuthenticated ? (
                         <DropdownMenu>
@@ -228,7 +264,6 @@ const Header = () => {
                         iconOnly
                     />
 
-
                     {/* Mobile Menu */}
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
@@ -283,7 +318,6 @@ const Header = () => {
                                         }}
                                         iconOnly
                                     />
-
                                 </div>
 
                                 {/* User Section */}
